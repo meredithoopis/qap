@@ -102,3 +102,7 @@ feats/*
 eval_recordings/*
 .eggs/*
 .omo/*
+
+# QAP outputs (large)
+qap_runs/
+qap_runs_smoke/

@@ -1,0 +1,78 @@
+"""IG-Sub graded scenes G0-G4 for the retained tasks (proposal Sec. 6.1).
+
+    G0 same instance                         -> IG L0 scene, L0 solver
+    G1 same category, new instance           -> IG L2 scene, L0 solver
+    G2 different category, same affordance   -> L0 scene with an asset remap, L0 solver
+    G3 different affordance, new strategy    -> IG L3 scene, L3 solver
+    G4 no feasible substitute (abstain)      -> IG L3 scene with the substitute removed
+
+Built from the existing task template/envs without editing them: G2 swaps assets by
+patching the loader calls the task module makes (create_actor / get_actor_builder), G4
+parks the substitute actors out of reach after every reset (qap.scenes.graded).
+
+G2 needs a *different category with the same affordance*; only some tasks have one in
+the released asset sets. Entries marked status='proposed' are first guesses to be
+validated with `python -m qap.scenes.build_graded_scenes --validate` (instantiation +
+L0-solver success). Entries with g2=None have no G2 in IG-Sub (the per-grade analysis
+then uses the remaining grades for that task). Edit here, re-validate, then freeze.
+
+Remap keys:
+    "ycb:<id>"            -> "ycb:<new id>"                 (actors.get_actor_builder)
+    "robotwin:<name>"     -> {"modelname": ..., "model_id": int, "scale": [x,y,z]?}  (create_actor)
+G4 'hide': list of actor names, or "@l3_only" = actors present at L3 but not at L0
+(resolved from qap_runs/inventory/runtime_inventory.json).
+"""
+
+from __future__ import annotations
+
+from typing import Dict, Optional
+
+GradeSpec = Dict[str, object]
+
+G2: Dict[str, Optional[GradeSpec]] = {
+    "PlaceClothBasket": dict(remap={"robotwin:076_breadbasket": {"modelname": "062_plasticbox", "model_id": 0}},
+                             note="basket -> plastic storage box (open container, drop-in)", status="proposed"),
+    "PlaceCommodityRack": dict(remap={"robotwin:074_displaystand": {"modelname": "008_tray", "model_id": 0}},
+                               note="shelf -> tray (flat support, place-on)", status="proposed"),
+    "PourKetchupFries": dict(remap={"ycb:006_mustard_bottle": "ycb:022_windex_bottle",
+                                    "ycb:021_bleach_cleanser": "ycb:022_windex_bottle"},
+                             note="squeeze bottle -> spray bottle (grasp + squeeze over target)", status="proposed"),
+    "TransFood": dict(remap={"ycb:031_spoon": "ycb:033_spatula", "ycb:030_fork": "ycb:033_spatula"},
+                      note="spoon -> spatula (scoop affordance)", status="proposed"),
+    "PlacePillBox": dict(remap={"robotwin:062_plasticbox": {"modelname": "002_bowl", "model_id": 0}},
+                         note="storage box -> bowl (container). NB: L3 substitutes the patient, not the box", status="proposed"),
+    "PlaceBookBookcase": None,     # no other 'upright slot' container in the asset sets
+    "PlaceMagazineFolder": None,   # folder is a PartNet articulation with no same-affordance sibling
+    "PlacePlateRack": None,        # dumbbell-rack used as plate rack; no same-affordance alternative
+    "PlaceFoodScale": None,        # weighing has no different-category same-affordance object
+    "ScanPillBottle": None,        # only one handheld scanner category
+    "PutCubeOnScale": None,
+    "OpenLiquidCap": None,
+    "PutBox": None,                # other hinged boxes are the same category (that is G1)
+}
+
+
+def grade_spec(task: str, grade: str) -> Optional[GradeSpec]:
+    g = grade.upper()
+    if g == "G0":
+        return dict(level="L0", solver="L0", expected="copy")
+    if g == "G1":
+        return dict(level="L2", solver="L0", expected="copy")
+    if g == "G2":
+        spec = G2.get(task)
+        if spec is None:
+            return None
+        return dict(level="L0", solver="L0", expected="substitute", **spec)
+    if g == "G3":
+        return dict(level="L3", solver="L3", expected="substitute")
+    if g == "G4":
+        return dict(level="L3", solver="L3", expected="abstain", hide="@l3_only")
+    # plain IG levels are accepted too
+    if g in ("L0", "L1", "L2"):
+        return dict(level=g, solver="L0", expected="copy")
+    if g == "L3":
+        return dict(level="L3", solver="L3", expected="substitute")
+    raise ValueError(grade)
+
+
+GRADES = ("G0", "G1", "G2", "G3", "G4")
