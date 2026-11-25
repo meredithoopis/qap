@@ -5,7 +5,7 @@ set -euo pipefail
 export PYTHONPATH=$PWD:${PYTHONPATH:-}
 export QAP_DATA_ROOT=${QAP_DATA_ROOT:-$PWD/qap_runs}
 PROCS=${PROCS:-32}
-GPUS=${GPUS:-"0 1"}
+GPUS=${GPUS:-0}             # space-separated GPU ids for the shortcut-filter DP runs, e.g. GPUS="0 1"
 STAGE=${STAGE:-all}
 mkdir -p "$QAP_DATA_ROOT/logs"
 

@@ -89,7 +89,7 @@ def prepare(args) -> None:
             f"--frozen-backbone-type $BACKBONE --frozen-backbone-num-frames 10 --action-dim 16 --state-dim 18 "
             f"--obs-horizon 1 --pred-horizon 16 --obs-latent-dim 256 --task-latent-dim 256 --num-diffusion-iters 100 "
             f"--num-episodes {args.eval_episodes} --num-envs 1 --max-episode-steps 500 --control-mode pd_joint_pos "
-            f"--obs-mode rgb --sim-backend physx_cpu --shader rt-fast --use-ddim --num-ddim-steps 10 "
+            f"--obs-mode rgb --sim-backend physx_cpu --shader {args.shader} --use-ddim --num-ddim-steps 10 "
             f"--human-root {args.human_root} --sim-root {args.sim_root} --human-config {p['human_eval']} "
             f"--sim-config {p['sim_eval']} --task-mapping {LM}/task_mapping.json "
             f"--human-task-desc {LM}/task_desc/human_desc.json --sim-task-desc {LM}/task_desc/sim_desc.json "
@@ -151,6 +151,9 @@ def main() -> None:
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--n-train", type=int, default=50)
     p.add_argument("--eval-episodes", type=int, default=20)
+    p.add_argument("--shader", default="default",
+                   help="SAPIEN shader for DP evaluation renders. IG's own runs use rt-fast, which needs the "
+                        "OptiX denoiser (libnvoptix); 'default' is rasterised and works on any GPU driver")
     s = sp.add_parser("summarize")
     s.add_argument("--metric", default="success_once")
     s.add_argument("--threshold", type=float, default=0.5)

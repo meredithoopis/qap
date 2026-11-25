@@ -121,8 +121,10 @@ def label_scene(task: str, grade: str, seeds: List[int], images: bool, mid: bool
             if ok and (_latched(g["events"]) & ~_latched(s["events"])).any():
                 rows.append(dict(s=g, w=w, g=s, cat=cat, label=0, source="reverse_irr", seed=seed, err=None,
                                  img_s=img_g, img_g=img_s))
-            # restart from a mid-episode state
-            if mid and len(arr["sim_t"]) > 2:
+            # restart from a mid-episode state. Skipped after a failed G4 run: G4 has no reachable
+            # substitute, so the restart fails too and (without a successful final state to use as
+            # goal) yields no row, costing a full trial timeout per seed.
+            if mid and (ok or grade != "G4") and len(arr["sim_t"]) > 2:
                 cands = [i for i, t in enumerate(arr["sim_t"]) if 0 < t < 0.6 * T]
                 if cands:
                     i = cands[np.random.default_rng(seed).integers(len(cands))]

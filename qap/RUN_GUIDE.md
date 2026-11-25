@@ -171,7 +171,7 @@ against the PDF before freezing.
 ### 1.3 Shortcut filter (DP on L0–L2 per retained task, background)
 
 ```bash
-python -m qap.week1.shortcut_filter prepare --gpus 0 1        # per-task configs + launcher
+python -m qap.week1.shortcut_filter prepare --gpus 0          # per-task configs + launcher (one entry per GPU)
 nohup bash $QAP_DATA_ROOT/shortcut/run_shortcut.sh > $QAP_DATA_ROOT/logs/shortcut.log 2>&1 &
 # ... when all tasks are evaluated:
 python -m qap.week1.shortcut_filter summarize                  # KEEP if DP L3 success < 50%
@@ -180,7 +180,9 @@ python -m qap.week1.screen_tasks --apply-shortcut-results $QAP_DATA_ROOT/shortcu
 
 This uses the IG DP trainer/evaluator unchanged: video-only, DINOv2, the same flags as
 `exp_scripts/diffusion_policy`. Training data per task is L0–L2 × 50 episodes, and evaluation
-covers L0 (sanity) and L3. Each task's corpus is about 60× smaller than C45, so the epoch
+covers L0 (sanity) and L3. Evaluation renders with `--shader default`; IG's own runs use
+`rt-fast`, which needs the OptiX denoiser and fails on drivers without `libnvoptix`
+(`prepare --shader rt-fast` restores it). Each task's corpus is about 60× smaller than C45, so the epoch
 default is 200 (`--epochs`). The filter can only *remove* tasks. Apply its results before any
 QAP evaluation.
 
@@ -259,7 +261,9 @@ CUDA_VISIBLE_DEVICES=0 python -m qap.quasimetric.train --objective qrl --head iq
   mean + 1·std.
 - **Output:** `$QAP_DATA_ROOT/runs/<name>/{ckpt.pt,log.jsonl,config.json}`.
 
-Variants for the selection study (same encoder; these fit on the second GPU):
+Variants for the selection study (same encoder). `week2.sh` runs them one after another
+next to the main ensemble, on GPU 0 by default (one H100 holds both); with a second GPU
+set `GPU_AUX=1`:
 
 ```bash
 python -m qap.quasimetric.train --objective tmd  --head iqe --ensemble 5 --run-name tmd_iqe_k5
