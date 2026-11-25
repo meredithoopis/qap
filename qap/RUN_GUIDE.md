@@ -52,6 +52,10 @@ ls demos/imitator_human_v1 | head -3; ls demos/imitator_sim_v1_zed2i | head -3
 
 export PYTHONPATH=$PWD:$PYTHONPATH
 export QAP_DATA_ROOT=$PWD/qap_runs
+
+# completeness / layout check of the 50 human + 200 sim datasets (read-only; add --deep to
+# compare parquet rows with meta/info.json, --robot for the real-robot folders)
+python -m qap.scripts.check_dataset
 ```
 
 Check the simulator and planner work:
