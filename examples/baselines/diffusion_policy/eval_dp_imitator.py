@@ -569,6 +569,20 @@ def save_results_to_json(results: List[Dict], path: Path):
 # Agent loader
 # =============================================================================
 
+def _known_fields(cls, kwargs):
+    """Build a dataclass from kwargs, dropping keys it does not define.
+
+    The evaluator passes a few fields (task_seq_len, vocab_size, max_text_len, num_tasks,
+    mano_dim) that the current train_dp_imitator.TrainingArgs no longer has.
+    """
+    import dataclasses
+    names = {f.name for f in dataclasses.fields(cls)}
+    dropped = sorted(k for k in kwargs if k not in names)
+    if dropped:
+        print(f"   (ignoring fields unknown to TrainingArgs: {dropped})")
+    return cls(**{k: v for k, v in kwargs.items() if k in names})
+
+
 def load_agent_from_checkpoint(checkpoint_path: str, args, device: torch.device):
     """Load DPAgent from checkpoint, rebuilding from saved args."""
     from examples.baselines.diffusion_policy.train_dp_imitator import DPAgent, TrainingArgs
@@ -583,7 +597,7 @@ def load_agent_from_checkpoint(checkpoint_path: str, args, device: torch.device)
     def _get(key, default):
         return saved.get(key, default)
 
-    training_args = TrainingArgs(
+    training_args = _known_fields(TrainingArgs, dict(
         action_dim               = _get("action_dim",               args.action_dim),
         state_dim                = _get("state_dim",                args.state_dim),
         obs_horizon              = _get("obs_horizon",              args.obs_horizon),
@@ -621,7 +635,7 @@ def load_agent_from_checkpoint(checkpoint_path: str, args, device: torch.device)
         state_num_layers                 = _get("state_num_layers", 4),
         state_num_heads                  = _get("state_num_heads", 4),
         cuda                             = True,
-    )
+    ))
 
     print(f"\n🤖 Creating DPAgent ...")
     agent = DPAgent(training_args, device)

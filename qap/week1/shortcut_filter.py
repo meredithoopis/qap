@@ -86,7 +86,10 @@ def prepare(args) -> None:
             f"--frozen-backbone-num-frames 10 --frozen-backbone-adapter-layers 1 --frozen-backbone-seq-patches 32 "
             f"--control-mode pd_joint_pos --batch-size {args.batch_size} --total-epochs $EPOCHS --lr 1e-4 "
             f"--save-epoch-freq 50 --num-dataload-workers {args.workers} --env-id {('TwoRobot' + task + '-v1')} "
-            f"--max-episode-steps 500 --unet-dims 352 704 1408 2816 --exp-name {exp_name}"
+            f"--max-episode-steps 500 --unet-dims 352 704 1408 2816 --exp-name {exp_name} "
+            # per-task DINOv2 feature cache: IG's default ./te_cache is shared, and a cache built
+            # for one task's human video makes the next task fail with "Cache miss with video=None"
+            f"--te-cache-root {root / 'te_cache' / task}"
         )
         evalc = (
             f"CUDA_VISIBLE_DEVICES={gpu} python -m {DP_EVAL} --eval-config {p['eval_list']} "
