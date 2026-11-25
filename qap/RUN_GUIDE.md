@@ -175,8 +175,10 @@ against the PDF before freezing.
 ### 1.3 Shortcut filter (DP on L0–L2 per retained task, background)
 
 ```bash
-python -m qap.week1.shortcut_filter prepare --gpus 0          # per-task configs + launcher (one entry per GPU)
-nohup bash $QAP_DATA_ROOT/shortcut/run_shortcut.sh > $QAP_DATA_ROOT/logs/shortcut.log 2>&1 &
+python -m qap.week1.shortcut_filter prepare                    # configs + per-task scripts (seconds)
+# Slurm: one array task per retained task, 1 GPU each, at most 4 at a time, resumable
+sbatch qap/scripts/shortcut.sbatch                             # logs: shortcut_<job>_<i>.out
+# (without Slurm: nohup bash $QAP_DATA_ROOT/shortcut/run_shortcut.sh > $QAP_DATA_ROOT/logs/shortcut.log 2>&1 &)
 # ... when all tasks are evaluated:
 python -m qap.week1.shortcut_filter summarize                  # KEEP if DP L3 success < 50%
 python -m qap.week1.screen_tasks --apply-shortcut-results $QAP_DATA_ROOT/shortcut/summary.json
@@ -186,8 +188,10 @@ This uses the IG DP trainer/evaluator unchanged: video-only, DINOv2, the same fl
 `exp_scripts/diffusion_policy`. Training data per task is L0–L2 × 50 episodes, and evaluation
 covers L0 (sanity) and L3. Evaluation renders with `--shader default`; IG's own runs use
 `rt-fast`, which needs the OptiX denoiser and fails on drivers without `libnvoptix`
-(`prepare --shader rt-fast` restores it). Each task's corpus is about 60× smaller than C45, so the epoch
-default is 200 (`--epochs`). The filter can only *remove* tasks. Apply its results before any
+(`prepare --shader rt-fast` restores it). IG trains C45 for 10 epochs (about 80k steps); one task's L0–L2 corpus is much smaller, so the
+default here is 100 epochs (`--epochs`, about 35k steps at batch 128). With 8 GPUs in parallel
+the whole filter takes roughly 3–7 h; test and calibration tasks run first. A task killed at
+the time limit resumes from its newest epoch checkpoint when resubmitted. The filter can only *remove* tasks. Apply its results before any
 QAP evaluation.
 
 ### 1.4 Robot data as object-centric states

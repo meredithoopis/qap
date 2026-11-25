@@ -1,0 +1,744 @@
+{
+  "rule": {
+    "min_gap": 10.0,
+    "require_intent": true,
+    "count_grasp_change": false,
+    "model": "mean",
+    "source": "IG Table 11 (DP/ACT, 10 episodes per cell)"
+  },
+  "retained": [
+    {
+      "task": "PlaceBookBookcase",
+      "gap": 40.0,
+      "demo": "bookcase",
+      "sub": "storage box (occluded by a book)",
+      "prim_l0": "pick book + insert upright into shelf",
+      "prim_l3": "unblock (move book) + pick + place into box",
+      "reversibility": "reversible",
+      "role": "container",
+      "ig_L0": 100.0,
+      "ig_L3": 60.0
+    },
+    {
+      "task": "PlaceClothBasket",
+      "gap": 50.0,
+      "demo": "bamboo basket",
+      "sub": "storage box (occluded by a book)",
+      "prim_l0": "pick clothes + drop into basket",
+      "prim_l3": "unblock (move book) + pick + insert into box",
+      "reversibility": "reversible",
+      "role": "container",
+      "ig_L0": 100.0,
+      "ig_L3": 50.0
+    },
+    {
+      "task": "PlaceMagazineFolder",
+      "gap": 20.0,
+      "demo": "folder (articulated)",
+      "sub": "white magazine (flat support)",
+      "prim_l0": "open folder (bimanual) + insert magazine",
+      "prim_l3": "pick magazine + stack on magazine",
+      "reversibility": "reversible",
+      "role": "container",
+      "ig_L0": 90.0,
+      "ig_L3": 70.0
+    },
+    {
+      "task": "PlaceCommodityRack",
+      "gap": 55.0,
+      "demo": "shelf + packaged goods",
+      "sub": "mug racks + cups",
+      "prim_l0": "pick + place on shelf (x2)",
+      "prim_l3": "pick + hang cup on rack (x2)",
+      "reversibility": "reversible",
+      "role": "fixture",
+      "ig_L0": 70.0,
+      "ig_L3": 15.0
+    },
+    {
+      "task": "PlacePlateRack",
+      "gap": 15.0,
+      "demo": "plate rack",
+      "sub": "plate (bowl stacked on it)",
+      "prim_l0": "pick plate + insert upright into rack",
+      "prim_l3": "pick bowl + stack on plate",
+      "reversibility": "reversible",
+      "role": "fixture",
+      "ig_L0": 95.0,
+      "ig_L3": 80.0
+    },
+    {
+      "task": "PourKetchupFries",
+      "gap": 30.0,
+      "demo": "squeeze bottle",
+      "sub": "pump dispenser",
+      "prim_l0": "grasp bottle + squeeze over fries + set down",
+      "prim_l3": "press pump over fries (no grasp)",
+      "reversibility": "irreversible",
+      "role": "tool",
+      "ig_L0": 75.0,
+      "ig_L3": 45.0
+    },
+    {
+      "task": "TransFood",
+      "gap": 30.0,
+      "demo": "spoon",
+      "sub": "source bowl (poured)",
+      "prim_l0": "grasp spoon + scoop + deposit",
+      "prim_l3": "grasp bowl + tilt-pour into bowl",
+      "reversibility": "irreversible",
+      "role": "tool",
+      "ig_L0": 55.0,
+      "ig_L3": 25.0
+    },
+    {
+      "task": "PlaceFoodScale",
+      "gap": 50.0,
+      "demo": "electronic scale",
+      "sub": "balance scale + weight",
+      "prim_l0": "pick + place on scale",
+      "prim_l3": "pick + place on pan + other arm places counterweight",
+      "reversibility": "reversible",
+      "role": "fixture",
+      "ig_L0": 50.0,
+      "ig_L3": 0.0
+    },
+    {
+      "task": "ScanPillBottle",
+      "gap": 90.0,
+      "demo": "handheld scanner gun",
+      "sub": "desktop scanner (fixed)",
+      "prim_l0": "bimanual: grasp scanner + present bottle",
+      "prim_l3": "pick bottle + present to fixed scanner",
+      "reversibility": "event",
+      "role": "tool",
+      "ig_L0": 95.0,
+      "ig_L3": 5.0
+    },
+    {
+      "task": "PlacePillBox",
+      "gap": 40.0,
+      "demo": "loose pill",
+      "sub": "pill bottle (dispensed)",
+      "prim_l0": "pick pill + drop into box",
+      "prim_l3": "grasp bottle + tip to dispense into box",
+      "reversibility": "irreversible",
+      "role": "patient",
+      "ig_L0": 90.0,
+      "ig_L3": 50.0
+    },
+    {
+      "task": "PutCubeOnScale",
+      "gap": 35.0,
+      "demo": "electronic scale",
+      "sub": "balance scale + second object",
+      "prim_l0": "pick + place on scale",
+      "prim_l3": "pick + place on pan + other arm places counterweight",
+      "reversibility": "reversible",
+      "role": "fixture",
+      "ig_L0": 100.0,
+      "ig_L3": 65.0
+    },
+    {
+      "task": "OpenLiquidCap",
+      "gap": 50.0,
+      "demo": "screw cap",
+      "sub": "cup used as a lid",
+      "prim_l0": "unscrew cap (rotate) + place on plate",
+      "prim_l3": "lift cup off bottle + place on plate",
+      "reversibility": "reversible",
+      "role": "articulated",
+      "ig_L0": 75.0,
+      "ig_L3": 25.0
+    },
+    {
+      "task": "PutBox",
+      "gap": 45.0,
+      "demo": "hinged-lid box",
+      "sub": "sliding-lid storage box",
+      "prim_l0": "pick + place into box + close hinged lid",
+      "prim_l3": "pick + place into box + slide lid shut",
+      "reversibility": "reversible",
+      "role": "container",
+      "ig_L0": 100.0,
+      "ig_L3": 55.0
+    }
+  ],
+  "excluded": [
+    {
+      "task": "StirSpoon",
+      "gap": -10.0,
+      "demo": "spoon",
+      "sub": "chopsticks",
+      "prim_l0": "grasp tool + stir in bowl + return",
+      "prim_l3": "grasp tool + stir in bowl + return",
+      "reversibility": "event",
+      "role": "tool",
+      "ig_L0": 35.0,
+      "ig_L3": 45.0,
+      "excluded_because": [
+        "R1: primitive unchanged (grasp-only change)",
+        "R2: L0-L3 gap -10.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PickRemoteControl",
+      "gap": 40.0,
+      "demo": "table surface (source)",
+      "sub": "black box (elevated source)",
+      "prim_l0": "pick + place into box",
+      "prim_l3": "pick from elevated support + place into box",
+      "reversibility": "reversible",
+      "role": "source",
+      "ig_L0": 100.0,
+      "ig_L3": 60.0,
+      "excluded_because": [
+        "R1: primitive unchanged"
+      ]
+    },
+    {
+      "task": "PickWash",
+      "gap": -5.0,
+      "demo": "free spot between bottles",
+      "sub": "storage box",
+      "prim_l0": "pick + place on surface",
+      "prim_l3": "pick + place into box",
+      "reversibility": "reversible",
+      "role": "container",
+      "ig_L0": 80.0,
+      "ig_L3": 85.0,
+      "excluded_because": [
+        "R1: primitive unchanged",
+        "R2: L0-L3 gap -5.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PickAppleBasket",
+      "gap": -5.0,
+      "demo": "fruit basket",
+      "sub": "storage box",
+      "prim_l0": "pick + place into container",
+      "prim_l3": "pick + place into container",
+      "reversibility": "reversible",
+      "role": "container",
+      "ig_L0": 85.0,
+      "ig_L3": 90.0,
+      "excluded_because": [
+        "R1: primitive unchanged",
+        "R2: L0-L3 gap -5.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PickAppleBananaToBaskets",
+      "gap": -5.0,
+      "demo": "fruit baskets",
+      "sub": "storage boxes",
+      "prim_l0": "bimanual pick + place into containers",
+      "prim_l3": "bimanual pick + place into containers",
+      "reversibility": "reversible",
+      "role": "container",
+      "ig_L0": 70.0,
+      "ig_L3": 75.0,
+      "excluded_because": [
+        "R1: primitive unchanged",
+        "R2: L0-L3 gap -5.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PickAppleToScale",
+      "gap": -15.0,
+      "demo": "electronic scale",
+      "sub": "balance scale + weight",
+      "prim_l0": "pick + place on scale",
+      "prim_l3": "pick + place on pan + other arm places counterweight",
+      "reversibility": "reversible",
+      "role": "fixture",
+      "ig_L0": 65.0,
+      "ig_L3": 80.0,
+      "excluded_because": [
+        "R2: L0-L3 gap -15.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PlaceChipsRack",
+      "gap": -10.0,
+      "demo": "chips (instance)",
+      "sub": "chips (other instance)",
+      "prim_l0": "pick + place on shelf",
+      "prim_l3": "pick + place on shelf",
+      "reversibility": "reversible",
+      "role": "patient",
+      "ig_L0": 80.0,
+      "ig_L3": 90.0,
+      "excluded_because": [
+        "R1: primitive unchanged",
+        "R2: L0-L3 gap -10.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PlaceFruitBox",
+      "gap": 30.0,
+      "demo": "fruit basket (source)",
+      "sub": "storage box (source)",
+      "prim_l0": "pick + place into box (x2)",
+      "prim_l3": "pick + place into box (x2)",
+      "reversibility": "reversible",
+      "role": "source",
+      "ig_L0": 75.0,
+      "ig_L3": 45.0,
+      "excluded_because": [
+        "R1: primitive unchanged"
+      ]
+    },
+    {
+      "task": "ScanMilkBox",
+      "gap": 5.0,
+      "demo": "handheld scanner gun",
+      "sub": "desktop scanner (fixed)",
+      "prim_l0": "bimanual: grasp scanner + present product",
+      "prim_l3": "unimanual: pick product + present to fixed scanner",
+      "reversibility": "event",
+      "role": "tool",
+      "ig_L0": 100.0,
+      "ig_L3": 95.0,
+      "excluded_because": [
+        "R2: L0-L3 gap 5.0 < 10.0"
+      ]
+    },
+    {
+      "task": "CutFruit",
+      "gap": 0.0,
+      "demo": "kitchen knife",
+      "sub": "scissors (pre-grasped)",
+      "prim_l0": "grasp knife + slice + return",
+      "prim_l3": "snip with pre-grasped scissors",
+      "reversibility": "irreversible",
+      "role": "tool",
+      "ig_L0": 100.0,
+      "ig_L3": 100.0,
+      "excluded_because": [
+        "R2: L0-L3 gap 0.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PickFruitsToPlate",
+      "gap": 30.0,
+      "demo": "round plate",
+      "sub": "square plate",
+      "prim_l0": "bimanual pick + place on plate",
+      "prim_l3": "bimanual pick + place on plate",
+      "reversibility": "reversible",
+      "role": "container",
+      "ig_L0": 55.0,
+      "ig_L3": 25.0,
+      "excluded_because": [
+        "R1: primitive unchanged"
+      ]
+    },
+    {
+      "task": "WipePot",
+      "gap": -75.0,
+      "demo": "rag",
+      "sub": "brush",
+      "prim_l0": "grasp rag + wipe pot x3",
+      "prim_l3": "grasp brush + scrub pot x3",
+      "reversibility": "irreversible",
+      "role": "tool",
+      "ig_L0": 15.0,
+      "ig_L3": 90.0,
+      "excluded_because": [
+        "R1: primitive unchanged (grasp-only change)",
+        "R2: L0-L3 gap -75.0 < 10.0"
+      ]
+    },
+    {
+      "task": "CleanDesk",
+      "gap": -35.0,
+      "demo": "rag",
+      "sub": "tissue",
+      "prim_l0": "grasp rag + wipe stain",
+      "prim_l3": "grasp tissue + wipe stain",
+      "reversibility": "irreversible",
+      "role": "tool",
+      "ig_L0": 45.0,
+      "ig_L3": 80.0,
+      "excluded_because": [
+        "R1: primitive unchanged",
+        "R2: L0-L3 gap -35.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PourKettle",
+      "gap": 5.0,
+      "demo": "kettle (handle)",
+      "sub": "water bottle (body grasp)",
+      "prim_l0": "grasp handle + tilt-pour",
+      "prim_l3": "grasp body + tilt-pour",
+      "reversibility": "irreversible",
+      "role": "tool",
+      "ig_L0": 95.0,
+      "ig_L3": 90.0,
+      "excluded_because": [
+        "R1: primitive unchanged (grasp-only change)",
+        "R2: L0-L3 gap 5.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PickFood",
+      "gap": -20.0,
+      "demo": "trash bin",
+      "sub": "bamboo basket",
+      "prim_l0": "bimanual pick + drop into bin",
+      "prim_l3": "bimanual pick + place into basket",
+      "reversibility": "reversible",
+      "role": "container",
+      "ig_L0": 70.0,
+      "ig_L3": 90.0,
+      "excluded_because": [
+        "R1: primitive unchanged",
+        "R2: L0-L3 gap -20.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PressStapler",
+      "gap": 10.0,
+      "demo": "stapler",
+      "sub": "folder",
+      "prim_l0": "press stapler on document",
+      "prim_l3": "pick document + insert into folder",
+      "reversibility": "irreversible",
+      "role": "tool",
+      "ig_L0": 75.0,
+      "ig_L3": 65.0,
+      "excluded_because": [
+        "R3: intent not preserved at L3"
+      ]
+    },
+    {
+      "task": "PlaceBurgerTray",
+      "gap": 15.0,
+      "demo": "tray",
+      "sub": "plate",
+      "prim_l0": "pick + place into tray",
+      "prim_l3": "pick + place onto plate",
+      "reversibility": "reversible",
+      "role": "container",
+      "ig_L0": 85.0,
+      "ig_L3": 70.0,
+      "excluded_because": [
+        "R1: primitive unchanged"
+      ]
+    },
+    {
+      "task": "PickTennisBallGolfBall",
+      "gap": 0.0,
+      "demo": "lidded boxes",
+      "sub": "open storage boxes",
+      "prim_l0": "pick + place into box + close lid (x2)",
+      "prim_l3": "pick + place into box (x2)",
+      "reversibility": "reversible",
+      "role": "container",
+      "ig_L0": 75.0,
+      "ig_L3": 75.0,
+      "excluded_because": [
+        "R2: L0-L3 gap 0.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PlaceShoeBox",
+      "gap": 0.0,
+      "demo": "shoe box",
+      "sub": "storage box",
+      "prim_l0": "bimanual pick + place into box",
+      "prim_l3": "bimanual pick + place into box",
+      "reversibility": "reversible",
+      "role": "container",
+      "ig_L0": 95.0,
+      "ig_L3": 95.0,
+      "excluded_because": [
+        "R1: primitive unchanged",
+        "R2: L0-L3 gap 0.0 < 10.0"
+      ]
+    },
+    {
+      "task": "OpenBox",
+      "gap": 0.0,
+      "demo": "large box",
+      "sub": "small box",
+      "prim_l0": "lift lid open",
+      "prim_l3": "lift lid open",
+      "reversibility": "reversible",
+      "role": "articulated",
+      "ig_L0": 100.0,
+      "ig_L3": 100.0,
+      "excluded_because": [
+        "R1: primitive unchanged",
+        "R2: L0-L3 gap 0.0 < 10.0"
+      ]
+    },
+    {
+      "task": "FoldBox",
+      "gap": 0.0,
+      "demo": "cardboard box flaps",
+      "sub": "storage box lid",
+      "prim_l0": "push-fold flaps closed",
+      "prim_l3": "push lid closed",
+      "reversibility": "reversible",
+      "role": "articulated",
+      "ig_L0": 100.0,
+      "ig_L3": 100.0,
+      "excluded_because": [
+        "R1: primitive unchanged",
+        "R2: L0-L3 gap 0.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PickPillToRegions",
+      "gap": 20.0,
+      "demo": "table regions",
+      "sub": "double-layer shelf",
+      "prim_l0": "bimanual pick + place in region",
+      "prim_l3": "bimanual pick + place on shelf layer",
+      "reversibility": "reversible",
+      "role": "support",
+      "ig_L0": 65.0,
+      "ig_L3": 45.0,
+      "excluded_because": [
+        "R1: primitive unchanged"
+      ]
+    },
+    {
+      "task": "PlaceFileFolder",
+      "gap": -10.0,
+      "demo": "folder (articulated)",
+      "sub": "tray",
+      "prim_l0": "open folder (bimanual) + insert document",
+      "prim_l3": "pick document + place into tray",
+      "reversibility": "reversible",
+      "role": "container",
+      "ig_L0": 80.0,
+      "ig_L3": 90.0,
+      "excluded_because": [
+        "R2: L0-L3 gap -10.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PourLiquidCup",
+      "gap": 5.0,
+      "demo": "cup",
+      "sub": "mug",
+      "prim_l0": "grasp bottle + tilt-pour",
+      "prim_l3": "grasp bottle + tilt-pour",
+      "reversibility": "irreversible",
+      "role": "container",
+      "ig_L0": 10.0,
+      "ig_L3": 5.0,
+      "excluded_because": [
+        "R1: primitive unchanged",
+        "R2: L0-L3 gap 5.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PlaceBrushRest",
+      "gap": -15.0,
+      "demo": "brush rest",
+      "sub": "brush pot",
+      "prim_l0": "pick brush + lay on rest",
+      "prim_l3": "pick brush + insert upright into pot",
+      "reversibility": "reversible",
+      "role": "support",
+      "ig_L0": 85.0,
+      "ig_L3": 100.0,
+      "excluded_because": [
+        "R2: L0-L3 gap -15.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PlaceCupPlate",
+      "gap": 30.0,
+      "demo": "tray",
+      "sub": "double-layer rack",
+      "prim_l0": "bimanual pick + place on tray",
+      "prim_l3": "bimanual pick + place on rack layer",
+      "reversibility": "reversible",
+      "role": "support",
+      "ig_L0": 45.0,
+      "ig_L3": 15.0,
+      "excluded_because": [
+        "R1: primitive unchanged"
+      ]
+    },
+    {
+      "task": "PlaceScrewdriver",
+      "gap": 0.0,
+      "demo": "screwdriver",
+      "sub": "hammer",
+      "prim_l0": "grasp tool + screw (rotate) into block",
+      "prim_l3": "grasp tool + strike block",
+      "reversibility": "event",
+      "role": "tool",
+      "ig_L0": 65.0,
+      "ig_L3": 65.0,
+      "excluded_because": [
+        "R2: L0-L3 gap 0.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PlaceMugRack",
+      "gap": 5.0,
+      "demo": "mug rack",
+      "sub": "plate",
+      "prim_l0": "pick mug + hang on rack",
+      "prim_l3": "pick mug + place on plate",
+      "reversibility": "reversible",
+      "role": "fixture",
+      "ig_L0": 100.0,
+      "ig_L3": 95.0,
+      "excluded_because": [
+        "R2: L0-L3 gap 5.0 < 10.0"
+      ]
+    },
+    {
+      "task": "PourLiquidMug",
+      "gap": 20.0,
+      "demo": "mug / test tube (instance)",
+      "sub": "cup / test tube (other)",
+      "prim_l0": "grasp tube + tilt-pour + return",
+      "prim_l3": "grasp tube + tilt-pour + return",
+      "reversibility": "irreversible",
+      "role": "container",
+      "ig_L0": 30.0,
+      "ig_L3": 10.0,
+      "excluded_because": [
+        "R1: primitive unchanged"
+      ]
+    },
+    {
+      "task": "PourCup",
+      "gap": -40.0,
+      "demo": "cup",
+      "sub": "cup with filter",
+      "prim_l0": "grasp mug + pour + return",
+      "prim_l3": "grasp mug + pour + return",
+      "reversibility": "irreversible",
+      "role": "container",
+      "ig_L0": 55.0,
+      "ig_L3": 95.0,
+      "excluded_because": [
+        "R1: primitive unchanged",
+        "R2: L0-L3 gap -40.0 < 10.0"
+      ]
+    },
+    {
+      "task": "CleanCup",
+      "gap": -60.0,
+      "demo": "brush",
+      "sub": "whiteboard eraser",
+      "prim_l0": "grasp brush + scrub cup",
+      "prim_l3": "grasp eraser + scrub cup",
+      "reversibility": "irreversible",
+      "role": "tool",
+      "ig_L0": 35.0,
+      "ig_L3": 95.0,
+      "excluded_because": [
+        "R1: primitive unchanged (grasp-only change)",
+        "R2: L0-L3 gap -60.0 < 10.0"
+      ]
+    },
+    {
+      "task": "GrindFood",
+      "gap": 10.0,
+      "demo": "grinding stick",
+      "sub": "bottle used as pestle",
+      "prim_l0": "grasp stick + grind in bowl",
+      "prim_l3": "grasp bottle + grind in bowl",
+      "reversibility": "irreversible",
+      "role": "tool",
+      "ig_L0": 95.0,
+      "ig_L3": 85.0,
+      "excluded_because": [
+        "R1: primitive unchanged (grasp-only change)"
+      ]
+    },
+    {
+      "task": "PourLiquidFilter",
+      "gap": 10.0,
+      "demo": "mug",
+      "sub": "kettle (handle)",
+      "prim_l0": "grasp mug + pour through filter",
+      "prim_l3": "grasp kettle + pour through filter",
+      "reversibility": "irreversible",
+      "role": "tool",
+      "ig_L0": 80.0,
+      "ig_L3": 70.0,
+      "excluded_because": [
+        "R1: primitive unchanged (grasp-only change)"
+      ]
+    },
+    {
+      "task": "KnifeBowlFork",
+      "gap": -20.0,
+      "demo": "knife",
+      "sub": "chopsticks (in bowl)",
+      "prim_l0": "bimanual pick + place cutlery beside bowl",
+      "prim_l3": "bimanual pick + place cutlery beside bowl",
+      "reversibility": "reversible",
+      "role": "patient",
+      "ig_L0": 50.0,
+      "ig_L3": 70.0,
+      "excluded_because": [
+        "R1: primitive unchanged (grasp-only change)",
+        "R2: L0-L3 gap -20.0 < 10.0"
+      ]
+    },
+    {
+      "task": "LiftLidFromSkillet",
+      "gap": -50.0,
+      "demo": "skillet lid",
+      "sub": "insulated-bag zipper",
+      "prim_l0": "grasp lid + lift + set down",
+      "prim_l3": "unzip / open bag (articulated)",
+      "reversibility": "reversible",
+      "role": "articulated",
+      "ig_L0": 50.0,
+      "ig_L3": 100.0,
+      "excluded_because": [
+        "R2: L0-L3 gap -50.0 < 10.0"
+      ]
+    },
+    {
+      "task": "FoldTowel",
+      "gap": 20.0,
+      "demo": "storage box (instance)",
+      "sub": "storage box (other)",
+      "prim_l0": "fold towel + pick + place into box",
+      "prim_l3": "fold towel + pick + place into box",
+      "reversibility": "reversible",
+      "role": "container",
+      "ig_L0": 80.0,
+      "ig_L3": 60.0,
+      "excluded_because": [
+        "R1: primitive unchanged"
+      ]
+    },
+    {
+      "task": "PressJuicer",
+      "gap": -60.0,
+      "demo": "juicer button",
+      "sub": "grinding stick + bowl",
+      "prim_l0": "press button",
+      "prim_l3": "grasp stick + grind fruit",
+      "reversibility": "event",
+      "role": "tool",
+      "ig_L0": 40.0,
+      "ig_L3": 100.0,
+      "excluded_because": [
+        "R2: L0-L3 gap -60.0 < 10.0",
+        "R3: intent not preserved at L3"
+      ]
+    }
+  ],
+  "n_retained": 13,
+  "frozen_utc": "2026-11-25T09:10:03.415949+00:00",
+  "sha256_16": "e78543ae097d064e"
+}
