@@ -431,6 +431,13 @@ logs/*.log
 - **numpy-2-only wheels (`np.long`, `StringDType`, `cbuffer_sizes` import errors):** the
   `[tool.uv] override-dependencies` in `pyproject.toml` cap scipy<1.16, zarr<3,
   numcodecs<0.16 because the project pins numpy<2. Re-run `uv sync` after changing them.
+- **DP training crashes at `from torch.utils.tensorboard import SummaryWriter`** with
+  `compiled against NumPy C-API version 0x12` (from `ml_dtypes` / `tensorflow`): tensorboard
+  imports TensorFlow if it is installed, and the installed TF / ml_dtypes wheels need NumPy 2.
+  TensorFlow is only used by the OpenVLA baseline, so remove it from the venv:
+  `uv pip uninstall tensorflow tensorflow-cpu tensorflow-datasets`, and from then on sync with
+  `uv sync --no-install-package tensorflow --no-install-package tensorflow-cpu --no-install-package tensorflow-datasets`
+  (a plain `uv sync` puts it back).
 - **`no motion-planning solution registered`:** that (task, level) is missing from
   `two_robot_run.MP_SOLUTIONS`. It is skipped and listed in the logs.
 - **Memory when loading many episodes:** use `--obj-dtype float16` and/or `--max-episodes N`

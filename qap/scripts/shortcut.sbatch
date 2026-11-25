@@ -4,7 +4,8 @@
 #
 # From the repository root:
 #     python -m qap.week1.shortcut_filter prepare        # once: writes configs + per-task scripts
-#     sbatch qap/scripts/shortcut.sbatch                 # all 13 tasks, at most 8 at a time (edit %8 to match free GPUs)
+#     sbatch qap/scripts/shortcut.sbatch                 # all 13 tasks, 2 at a time (per-user limit: 2 GPUs)
+#     sbatch --array=1-8%2 qap/scripts/shortcut.sbatch   # only the 8 test + calibration tasks
 #     sbatch --array=3,7 qap/scripts/shortcut.sbatch     # re-run selected tasks (line numbers of tasks.txt)
 # Order: test and calibration tasks are lines 1-8 of tasks.txt, so they run first.
 # Logs: shortcut_<jobid>_<arrayindex>.out in the repository root.
@@ -12,13 +13,14 @@
 # When every task is done:  python -m qap.week1.shortcut_filter summarize
 #
 #SBATCH --job-name=qap_shortcut
-#SBATCH --array=1-13%8
+#SBATCH --array=1-13%2
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --gres=gpu:1
 #SBATCH --mem=96G
-#SBATCH --time=08:00:00
+#SBATCH --time=0
+# --time=0 = no time limit (Slurm's "UNLIMITED"); the partition's MaxTime still applies if it has one
 #SBATCH --output=shortcut_%A_%a.out
 #SBATCH --error=shortcut_%A_%a.out
 # Uncomment / edit if your cluster needs them:
