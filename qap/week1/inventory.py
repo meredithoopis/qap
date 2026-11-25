@@ -79,7 +79,9 @@ def build_rows(runtime: Dict | None = None) -> List[Dict]:
         sub_assets = sorted(a3 - a0)
         coverage = {}
         for asset in sub_assets:
-            others = sorted(t for t, d in assets.items() if t != e.name and any(asset in s for s in d.values()))
+            # only the IG tasks themselves (task_mapping.json), not helper envs such as PickCubeYCB
+            others = sorted(t for t, d in assets.items()
+                            if t != e.name and t in tasks and any(asset in s for s in d.values()))
             coverage[asset] = others
         cov_tasks = sorted({t for v in coverage.values() for t in v})
         p0 = evaluate_keys(f["L0"]) if "L0" in f else []

@@ -1,0 +1,25 @@
+{
+  "_comment": "Reviewed from category_overrides.draft.json (runtime inventory, Week 1). 'global' maps actor names OR their automatically normalised names; 'per_task' maps exact actor names in one task. PartNet ids were identified from the env sources (self.*_model_ids) and mani_skill/envs/sim_assets_catigory.py.",
+  "global": {
+    "vagetable": "vegetable",
+    "golf": "golf_ball",
+    "tennis": "tennis_ball",
+    "rubiks_cube": "rubikscube",
+    "weight_on_scale": "weight",
+    "displaystand_bottom": "displaystand",
+    "displaystand_top": "displaystand"
+  },
+  "per_task": {
+    "CutFruit": {"10495-0": "scissors"},
+    "FoldBox": {"100154-0": "box", "100224-0": "box", "100141-0": "box"},
+    "OpenBox": {"100189-0": "box", "100141-0": "box"},
+    "LiftLidFromSkillet": {"102377-0": "bag"},
+    "FoldTowel": {"10040-0": "towel", "10243-0": "towel"},
+    "PlaceClothBasket": {"11242-0": "cloth", "11248-0": "cloth"},
+    "PlaceMagazineFolder": {"103762-0": "folder"},
+    "PlaceFileFolder": {"103762-0": "folder"},
+    "PressStapler": {"103762-0": "folder"},
+    "PourKetchupFries": {"101490-0": "dispenser"},
+    "PressJuicer": {"103105-0": "juicer", "103134-0": "juicer"}
+  }
+}
