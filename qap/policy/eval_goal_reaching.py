@@ -26,6 +26,7 @@ import numpy as np
 
 from qap.common.io import load_json, save_json
 from qap.common.paths import FROZEN_DIR, labels_dir
+from qap.common.timeout import time_limit, trial_timeout
 from qap.scenes.graded_specs import grade_spec
 
 
@@ -55,7 +56,8 @@ def rollout(task: str, grade: str, seeds: List[int], policy_path: str, budget_w:
         tr = dict(seed=seed)
         try:
             # 1) oracle run with the IG planner
-            left, right = solve(rec, seed=seed, debug=False, vis=False)
+            with time_limit(trial_timeout()):
+                left, right = solve(rec, seed=seed, debug=False, vis=False)
             arr = rec.episode_arrays()
             ok = bool(rec.unwrapped.evaluate()["success"].reshape(-1)[0].item())
             rec.flush(Path("."), {}, save=False)

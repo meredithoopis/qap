@@ -32,6 +32,7 @@ from qap.collect.heldout import heldout_tasks, is_heldout_scene
 from qap.common.io import count_transitions
 from qap.common.paths import episodes_dir
 from qap.common.tasks import all_tasks
+from qap.common.timeout import time_limit, trial_timeout
 
 PRIMS_FREE = ["pick", "pick", "pick", "push", "press", "articulate", "reach", "home"]
 PRIMS_HELD = ["place", "place", "place_on", "tilt", "reach_carry", "drop"]
@@ -132,7 +133,8 @@ def run_job(task: str, level: str, n_episodes: int, seed0: int, max_steps: int, 
         rng = np.random.default_rng(seed * 7919 + zlib.crc32(f"{task}/{level}".encode()) % 1000)
         try:
             env.reset(seed=seed)
-            log = play_episode(env, rng, int(rng.integers(3, 9)), max_steps)
+            with time_limit(trial_timeout()):   # transitions recorded before a timeout are kept
+                log = play_episode(env, rng, int(rng.integers(3, 9)), max_steps)
         except Exception:
             st["errors"] += 1
             st["last_error"] = traceback.format_exc(limit=3)

@@ -6,6 +6,8 @@ set -euo pipefail
 export PYTHONPATH=$PWD:${PYTHONPATH:-}
 export QAP_DATA_ROOT=${QAP_DATA_ROOT:-$PWD/qap_runs_smoke}
 TASK=${TASK:-PlaceFoodScale}
+# per-trial wall-clock limit for planner calls (G4 plans towards an unreachable, hidden object)
+export QAP_TRIAL_TIMEOUT=${QAP_TRIAL_TIMEOUT:-120}
 
 echo "== unit tests (heads)";            python -m pytest qap/tests -q
 echo "== static inventory";              python -m qap.week1.inventory --out "$QAP_DATA_ROOT/inventory_static"

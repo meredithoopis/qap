@@ -28,6 +28,7 @@ from typing import List, Tuple
 from qap.collect.heldout import heldout_tasks, is_heldout_scene
 from qap.common.paths import episodes_dir
 from qap.common.tasks import all_tasks, corpus_tasks
+from qap.common.timeout import time_limit, trial_timeout
 
 
 def _done_seeds(out: Path) -> Tuple[set, int]:
@@ -68,7 +69,8 @@ def run_scene(task: str, level: str, n_success: int, max_attempts: int, seed0: i
         stats["attempts"] += 1
         ok = False
         try:
-            left, right = solve(env, seed=seed, debug=False, vis=False)
+            with time_limit(trial_timeout()):
+                left, right = solve(env, seed=seed, debug=False, vis=False)
             ev = env.unwrapped.evaluate()
             ok = bool(ev["success"].reshape(-1)[0].item()) and left != -1 and right != -1
         except Exception:

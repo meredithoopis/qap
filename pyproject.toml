@@ -123,6 +123,9 @@ override-dependencies = [
     "draccus>=0.11.5",
     "diffusers>=0.36.0",
     "numpy>=1.22.4,<2.0.0",
+    "scipy>=1.10,<1.16",  # newer SciPy wheels are built for NumPy 2 and crash on np.long with numpy<2
+    "zarr>=2.12,<3",      # zarr 3 needs NumPy 2 (np.dtypes.StringDType); diffusion_policy uses the zarr 2 API
+    "numcodecs>=0.10.2,<0.16",  # numcodecs 0.16 made blosc.cbuffer_sizes private; zarr 2 imports it
     "huggingface-hub==0.33.1",
     "tensorflow>=2.16.1",
     "tensorflow-cpu>=2.16.1",

@@ -27,10 +27,13 @@ Large outputs go under `$QAP_DATA_ROOT` (default `./qap_runs`, already in `.giti
 
 ```bash
 cd The-Imitator-Game
-uv sync --active && source .venv/bin/activate
-# lerobot patch from the IG README
+uv sync                      # creates .venv (Python 3.12, from pyproject.toml) and installs everything
+source .venv/bin/activate    # repeat in every new shell / tmux pane
+which python                 # should print .../The-Imitator-Game/.venv/bin/python
+# lerobot patch from the IG README (path computed, the README's python3.11 is wrong for 3.12)
+LEROBOT_DIR=$(python -c "import lerobot, os; print(os.path.dirname(lerobot.__file__))")
 curl -sSL https://raw.githubusercontent.com/huggingface/lerobot/0e81a275fcdbf03d74f78aa69eaa28c172a9f256/src/lerobot/datasets/lerobot_dataset.py \
-  -o .venv/lib/python3.11/site-packages/lerobot/datasets/lerobot_dataset.py   # adjust python3.x to your venv
+  -o "$LEROBOT_DIR/datasets/lerobot_dataset.py"
 # Vulkan: see the ManiSkill install docs (needed for any rendering, e.g. --images)
 
 # assets -> ~/.maniskill/data
@@ -41,6 +44,11 @@ rm ~/.maniskill/data/*.tar.zst
 
 # simulated IG-10K (human clips + sim robot episodes) -> demos/
 hf download imitator-game/IG-10K-Dataset --repo-type dataset --local-dir demos
+# The download is NOT laid out as demos/demo_data + demos/imitator_data (IG README). It gives:
+#   demos/imitator_human_v1/       human_H<N>/              <- --human-root (shortcut filter default)
+#   demos/imitator_sim_v1_zed2i/   L<k>_TwoRobot<Task>-v1/  <- --sim-root   (shortcut filter default)
+#   demos/imitator_robot_v1/, demos/imitator_human_v1_levels/   (not used in Weeks 1-2)
+ls demos/imitator_human_v1 | head -3; ls demos/imitator_sim_v1_zed2i | head -3
 
 export PYTHONPATH=$PWD:$PYTHONPATH
 export QAP_DATA_ROOT=$PWD/qap_runs
@@ -49,7 +57,16 @@ export QAP_DATA_ROOT=$PWD/qap_runs
 Check the simulator and planner work:
 
 ```bash
-python -m mani_skill.examples.motionplanning.dual.two_robot_run -e TwoRobotPlaceFoodScale-v1 -n 1 --only-count-success --record-dir /tmp/demos
+# first: numpy/scipy must import together (pyproject caps scipy<1.16 because numpy<2)
+python -c "import numpy, scipy, scipy.spatial, trimesh; print(numpy.__version__, scipy.__version__)"
+
+# needs a level flag (--L0..--L3) or --traj-name, otherwise two_robot_run hits an unbound
+# variable; -o none skips camera rendering. Output goes to a throwaway temp folder only:
+#   $TMPCHK/TwoRobotPlaceFoodScale-v1/motionplanning/l0_TwoRobotPlaceFoodScale-v1.{h5,json}
+TMPCHK=$(mktemp -d /tmp/ig_check.XXXXXX)
+python -m mani_skill.examples.motionplanning.dual.two_robot_run -e TwoRobotPlaceFoodScale-v1 -n 1 --only-count-success --L0 -o none --record-dir "$TMPCHK"
+ls -lh "$TMPCHK"/TwoRobotPlaceFoodScale-v1/motionplanning/
+rm -rf "$TMPCHK"
 ```
 
 ### Smoke test (strongly recommended before the big jobs)
@@ -395,6 +412,13 @@ logs/*.log
 - **A stage fails with an attribute error inside ManiSkill:** run the smoke test and send the
   traceback. The code targets the ManiSkill version vendored in this repo (CPU PhysX,
   `pd_joint_pos`, gymnasium 0.29).
+- **A job hangs on one planner trial (seen on G4, where the L3 solver plans towards a hidden,
+  unreachable object):** every solver/play call runs under a wall-clock limit,
+  `QAP_TRIAL_TIMEOUT` seconds (default 300; the smoke test uses 120; `0` disables it). A
+  timeout counts as a planning failure (`timeouts` in graded_runner output), not an error.
+- **numpy-2-only wheels (`np.long`, `StringDType`, `cbuffer_sizes` import errors):** the
+  `[tool.uv] override-dependencies` in `pyproject.toml` cap scipy<1.16, zarr<3,
+  numcodecs<0.16 because the project pins numpy<2. Re-run `uv sync` after changing them.
 - **`no motion-planning solution registered`:** that (task, level) is missing from
   `two_robot_run.MP_SOLUTIONS`. It is skipped and listed in the logs.
 - **Memory when loading many episodes:** use `--obj-dtype float16` and/or `--max-episodes N`

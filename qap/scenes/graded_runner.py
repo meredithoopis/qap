@@ -48,7 +48,10 @@ def run_trials(task: str, grade: str, solver_level: Optional[str], seeds: List[i
     from qap.scenes.graded import make_graded_env
     from qap.state.recorder import StateRecorder
 
-    out = dict(task=task, grade=grade, solver=solver_level, trials=0, success=0, errors=0, error_msgs=[])
+    from qap.common.timeout import TrialTimeout, time_limit, trial_timeout
+
+    out = dict(task=task, grade=grade, solver=solver_level, trials=0, success=0, errors=0, timeouts=0,
+               error_msgs=[])
     try:
         env, solve, spec = make_graded_env(task, grade)
     except Exception as e:
@@ -69,8 +72,11 @@ def run_trials(task: str, grade: str, solver_level: Optional[str], seeds: List[i
         out["trials"] += 1
         ok = False
         try:
-            left, right = solve(rec, seed=seed, debug=False, vis=False)
+            with time_limit(trial_timeout()):
+                left, right = solve(rec, seed=seed, debug=False, vis=False)
             ok = _success(rec) and not (isinstance(left, int) or isinstance(right, int))
+        except TrialTimeout:
+            out["timeouts"] += 1          # a planning failure, not 'solver cannot run'
         except Exception as e:
             out["errors"] += 1
             if len(out["error_msgs"]) < 3:

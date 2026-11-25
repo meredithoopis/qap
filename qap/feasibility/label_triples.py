@@ -35,6 +35,7 @@ import numpy as np
 
 from qap.common.io import load_json, save_json
 from qap.common.paths import FROZEN_DIR, labels_dir
+from qap.common.timeout import time_limit, trial_timeout
 from qap.scenes.graded_specs import GRADES, grade_spec
 from qap.state.schema import EVENT_INDEX, LATCHED_EVENTS, OBJ_DIM
 
@@ -79,7 +80,8 @@ def label_scene(task: str, grade: str, seeds: List[int], images: bool, mid: bool
         ok, err = False, None
         img_s = img_g = None
         try:
-            left, right = solve(rec, seed=seed, debug=False, vis=False)
+            with time_limit(trial_timeout()):
+                left, right = solve(rec, seed=seed, debug=False, vis=False)
             ev = rec.unwrapped.evaluate()
             ok = bool(ev["success"].reshape(-1)[0].item()) and not (isinstance(left, int) or isinstance(right, int))
         except Exception as e:
