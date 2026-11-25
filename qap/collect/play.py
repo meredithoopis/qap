@@ -181,8 +181,12 @@ def main() -> None:
     n_eps = math.ceil(need / args.est_episode_len)
     n_jobs = math.ceil(n_eps / args.episodes_per_job)
     rng = np.random.default_rng(int(time.time()))
-    # resume-safe seeds: each run starts from a fresh, time-derived block
-    block = args.seed_base + int(rng.integers(1, 10_000_000)) * 1000
+    # resume-safe seeds: each run starts from a fresh, time-derived block.
+    # Seeds must stay below 2**32 (ManiSkill seeds np.random.RandomState with them), so the
+    # block index is capped: 100_000 + 2_000_000 * 1000 + jobs*episodes < 2**31.
+    block = args.seed_base + int(rng.integers(1, 2_000_000)) * 1000
+    if block + n_jobs * args.episodes_per_job >= 2**31:
+        block = args.seed_base
     jobs = []
     for j in range(n_jobs):
         t, l = scenes[j % len(scenes)]
@@ -194,6 +198,8 @@ def main() -> None:
         for st in pool.imap_unordered(_worker, jobs):
             got += st.get("transitions", 0)
             print(json.dumps({k: v for k, v in st.items() if k != "last_error"}) + f"  total_new={got}", flush=True)
+            if st.get("errors") and st.get("last_error"):
+                print("  last error: " + st["last_error"].strip().splitlines()[-1], flush=True)
     print(f"play transitions now: {count_transitions(out_root)}")
 
 

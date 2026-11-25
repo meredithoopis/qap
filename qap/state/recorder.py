@@ -89,6 +89,18 @@ class StateRecorder(gym.Wrapper):
         b = self._buf
         if b is None or not b["robot"]:
             return {}
+        # A trial timeout can interrupt step()/_push_state() half-way, leaving the per-state
+        # lists one entry apart. Keep only the fully recorded prefix.
+        n = min(len(b[k]) for k in ("robot", "obj", "events", "preds", "contact", "success"))
+        if n == 0:
+            return {}
+        for k in ("robot", "obj", "events", "preds", "contact", "success"):
+            del b[k][n:]
+        del b["action"][n - 1:]
+        b["onsets"] = [o for o in b["onsets"] if o[0] < n]
+        keep = [i for i, t in enumerate(b["sim_t"][: len(b["sim_state"])]) if t < n]
+        b["sim_t"] = [b["sim_t"][i] for i in keep]
+        b["sim_state"] = [b["sim_state"][i] for i in keep]
         n_obj = b["obj"][0].shape[0]
         sim = b["sim_state"]
         same = sim and all(x.shape == sim[0].shape for x in sim)

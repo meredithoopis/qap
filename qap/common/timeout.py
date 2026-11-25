@@ -44,13 +44,20 @@ def time_limit(seconds: Optional[float]) -> Iterator[None]:
         yield
         return
 
+    active = [True]
+
     def _raise(signum, frame):
-        raise TrialTimeout(f"trial exceeded {seconds:.0f}s")
+        if active[0]:
+            raise TrialTimeout(f"trial exceeded {seconds:.0f}s")
 
     previous = signal.signal(signal.SIGALRM, _raise)
-    signal.setitimer(signal.ITIMER_REAL, float(seconds))
+    # After the first expiry the alarm repeats every second: code inside the trial that does
+    # `except Exception: pass` (e.g. the recorder's get_state guard) can swallow one
+    # TrialTimeout, and a one-shot alarm would then never fire again and the trial would hang.
+    signal.setitimer(signal.ITIMER_REAL, float(seconds), 1.0)
     try:
         yield
     finally:
+        active[0] = False
         signal.setitimer(signal.ITIMER_REAL, 0)
         signal.signal(signal.SIGALRM, previous)
