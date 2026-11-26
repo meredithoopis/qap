@@ -55,7 +55,7 @@ def run_trials(task: str, grade: str, solver_level: Optional[str], seeds: List[i
     try:
         env, solve, spec = make_graded_env(task, grade)
     except Exception as e:
-        out.update(status="build_error", error=f"{type(e).__name__}: {e}", traceback=traceback.format_exc(limit=4))
+        out.update(status="build_error", error=f"{type(e).__name__}: {e}", traceback=traceback.format_exc())
         return out
     out["spec"] = {k: v for k, v in spec.items() if k != "task"}
     if solver_level is not None:
@@ -103,9 +103,13 @@ def _worker(job):
 def _pool_run(jobs: List[Dict], procs: int) -> List[Dict]:
     ctx = mp.get_context("spawn")
     res = []
+    shown = set()
     with ctx.Pool(procs, maxtasksperchild=1) as pool:
         for r in pool.imap_unordered(_worker, jobs):
             print(json.dumps({k: v for k, v in r.items() if k not in ("traceback", "spec")}), flush=True)
+            if r.get("traceback") and r.get("error") not in shown:   # full traceback once per distinct error
+                shown.add(r.get("error"))
+                print(f"--- traceback ({r['task']} {r['grade']}) ---\n{r['traceback']}", flush=True)
             res.append(r)
     return res
 

@@ -114,7 +114,15 @@ class HideActors(gym.Wrapper):
         for k, n in enumerate(self.names):
             p = PARK_XYZ + np.array([0.0, 0.35 * k, 0.0])
             sp = sapien.Pose(p=p.tolist())
-            if n in scene.actors:
+            if n.startswith("attr:"):     # the task attribute holding the actor (see graded_specs.G4_HIDE)
+                obj = getattr(self.env.unwrapped, n[5:], None)
+                if obj is None:
+                    raise KeyError(f"G4 hide: env has no attribute {n[5:]}")
+                if hasattr(obj, "set_root_pose"):
+                    obj.set_root_pose(sp)
+                else:
+                    obj.set_pose(Pose.create(sp))
+            elif n in scene.actors:
                 scene.actors[n].set_pose(Pose.create(sp))
             elif n in scene.articulations:
                 scene.articulations[n].set_root_pose(sp)

@@ -57,7 +57,9 @@ def make_env(task: str, level: str = "L0", *, obs_mode: str = "none",
     # collection can run on CPU-only nodes. Only valid when no images are requested.
     rb = os.environ.get("QAP_RENDER_BACKEND")
     if rb and obs_mode == "none" and render_mode is None and shader is None:
-        kwargs["render_backend"] = None if rb.lower() == "none" else rb
+        # pass the string "none": ManiSkill's parse_sim_and_render_backend slices the value
+        # (render_backend[:4]) before its None check, so a Python None raises a TypeError
+        kwargs["render_backend"] = "none" if rb.lower() == "none" else rb
     if env_kwargs:
         kwargs.update(env_kwargs)
     return gym.make(env_id_for(task, level), **kwargs)

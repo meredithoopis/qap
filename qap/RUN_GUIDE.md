@@ -290,17 +290,20 @@ processes / one H100 and are not measured yet; the first log lines show the real
 | # | Stage | Job | GPU | Needs | Estimate |
 |---|---|---|---|---|---|
 | 0 | apply shortcut results | login node | – | Week 1 | seconds |
-| 1 | validate graded scenes | `STAGE=validate` | no | 0 | 10–20 min |
-| 2 | graded episodes + planner feasibility | `STAGE=graded` | no | 1 (checked) | 1–2 h |
+| 1 | validate graded scenes | `STAGE=validate` | yes¹ | 0 | 10–15 min (28 min measured with the old 300 s limit) |
+| 2 | graded episodes + planner feasibility | `STAGE=graded` | yes¹ | 1 (checked) | 2.5–3.5 h |
 | 3 | feasibility triples (+ images) | `STAGE=labels` | yes | 1 | 1–2 h |
 | 4 | train QRL (main distance) | `STAGE=train,RUN=qrl_iqe` | yes | 2 | 1.5–3 h |
 | 5 | train TMD (rival for selection) | `STAGE=train,RUN=tmd_iqe` | yes | 2 | 1.5–3 h |
 | 6 | PR-AUC + select QRL vs TMD | `STAGE=prauc` | yes | 3, 4, 5 | 15–30 min |
 | 7 | *optional* MRN / HILP variants, then re-run 6 | `STAGE=train,RUN=qrl_mrn` / `hilp_l2` | yes | 2 | 1.5–3 h each |
 | 8 | policy extraction (AWR) | `STAGE=awr` | yes | 6 | 2–4 h |
-| 9 | oracle-goal reaching | `STAGE=goal` | no | 8 | 30–60 min |
+| 9 | oracle-goal reaching | `STAGE=goal` | yes¹ | 8 | 30–60 min |
 
-Required path (0–6, 8, 9): roughly **9–15 h** of jobs; the optional variants add 3–6 h.
+¹ These stages simulate on the CPU, but are submitted with a GPU so SAPIEN's renderer starts
+(`QAP_RENDER_BACKEND=` keeps the CPU-only switch off even if your shell has it set).
+
+Required path (0–6, 8, 9): roughly **11–17 h** of jobs; the optional variants add 3–6 h.
 
 Why this order: the graded scenes (1–2) are the yardstick for everything after them, and their
 episodes are added to training, so they come first. The labels (3) need only the scenes. Only
@@ -323,7 +326,7 @@ prints a warning if this has not been done. All 8 evaluated tasks passed, so the
 ### 1. Validate the graded scenes G0–G4 (CPU)
 
 ```bash
-sbatch -J w2_validate --export=ALL,STAGE=validate --gres=none qap/scripts/week2.sbatch
+sbatch -J w2_validate --export=ALL,STAGE=validate,QAP_RENDER_BACKEND= qap/scripts/week2.sbatch
 ```
 
 Each retained task is built at five difficulty grades, from "copy the demo" to "abstain":
@@ -340,13 +343,20 @@ No task file is edited. G2 patches the loader calls of the task module, and G4 p
 after every reset (it resolves `@l3_only` from `runtime_inventory.json`).
 
 G2 exists only where the assets allow a different category with the same affordance.
-`qap/scenes/graded_specs.py` proposes 5 swaps; the other 8 tasks have no G2:
+`qap/scenes/graded_specs.py` keeps 2 swaps after validation; the other 11 tasks have no G2:
 
-- PlaceClothBasket: basket → plastic box
-- PlaceCommodityRack: shelf → tray
-- PourKetchupFries: squeeze bottle → spray bottle
-- TransFood: spoon → spatula
-- PlacePillBox: box → bowl
+- PlaceClothBasket: basket → plastic box (5/5)
+- PlaceCommodityRack: shelf → tray (5/5)
+- dropped: PourKetchupFries squeeze → spray bottle (0/5), TransFood spoon → spatula (0/5),
+  PlacePillBox box → bowl (asset does not build)
+
+G4 normally hides the actors present at L3 but not at L0 (`@l3_only`). For TransFood,
+ScanPillBottle and PlacePillBox the names coincide, so `G4_HIDE` names the task attribute
+instead (`attr:bowl_src`, `attr:scanner`, `attr:pill`). G4 trials never succeed and run into the
+per-trial limit, which `week2.sbatch` sets to 120 s (`QAP_TRIAL_TIMEOUT`).
+
+Run graded stages **with a GPU** (omit `--gres=none`): the CPU-only renderer switch has not
+built an IG scene successfully yet.
 
 `validate` runs 5 trials per (task, grade) and writes `$QAP_DATA_ROOT/graded/validation.json`.
 **Read the table before stage 2:** G0–G3 should mostly succeed and G4 must fail. Remove or fix
@@ -355,7 +365,7 @@ G2 entries that do not build or never succeed, then re-validate.
 ### 2. Graded episodes and planner feasibility (CPU)
 
 ```bash
-sbatch -J w2_graded --export=ALL,STAGE=graded --gres=none qap/scripts/week2.sbatch
+sbatch -J w2_graded --export=ALL,STAGE=graded,QAP_RENDER_BACKEND= qap/scripts/week2.sbatch
 ```
 
 - `episodes`: 50 robot episodes per (task, grade) →
@@ -450,7 +460,7 @@ gripper command for both arms. 200k steps at batch 1024 → `$QAP_DATA_ROOT/runs
 ### 9. Oracle-goal reaching, the second go/no-go (CPU)
 
 ```bash
-sbatch -J w2_goal --export=ALL,STAGE=goal --gres=none qap/scripts/week2.sbatch
+sbatch -J w2_goal --export=ALL,STAGE=goal,QAP_RENDER_BACKEND= qap/scripts/week2.sbatch
 ```
 
 For each task × {G0, G1, G3} × 10 seeds (from 9000), the planner first solves the seed once to

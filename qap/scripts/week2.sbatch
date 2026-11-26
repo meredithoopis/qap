@@ -2,9 +2,10 @@
 # Week 2 as Slurm jobs, one stage per job (QOS: one running job per user, <=16 CPUs per job).
 # Submit from the repository root, in this order (see RUN_GUIDE.md, Week 2):
 #
-#   CPU only (no GPU needed; the renderer is switched off automatically):
-#     sbatch -J w2_validate --export=ALL,STAGE=validate --gres=none qap/scripts/week2.sbatch
-#     sbatch -J w2_graded   --export=ALL,STAGE=graded   --gres=none qap/scripts/week2.sbatch
+#   validate / graded / goal use CPU simulation but are run with a GPU for the renderer
+#   (CPU-only via --gres=none is possible but untested on IG scenes):
+#     sbatch -J w2_validate --export=ALL,STAGE=validate,QAP_RENDER_BACKEND= qap/scripts/week2.sbatch
+#     sbatch -J w2_graded   --export=ALL,STAGE=graded,QAP_RENDER_BACKEND= qap/scripts/week2.sbatch
 #   1 GPU:
 #     sbatch -J w2_labels   --export=ALL,STAGE=labels                 qap/scripts/week2.sbatch
 #     sbatch -J w2_qrl      --export=ALL,STAGE=train,RUN=qrl_iqe      qap/scripts/week2.sbatch
@@ -13,8 +14,8 @@
 #     sbatch -J w2_mrn      --export=ALL,STAGE=train,RUN=qrl_mrn      qap/scripts/week2.sbatch   # optional
 #     sbatch -J w2_hilp     --export=ALL,STAGE=train,RUN=hilp_l2      qap/scripts/week2.sbatch   # optional
 #     sbatch -J w2_awr      --export=ALL,STAGE=awr                    qap/scripts/week2.sbatch   # DIST=tmd_iqe if TMD won
-#   CPU only:
-#     sbatch -J w2_goal     --export=ALL,STAGE=goal     --gres=none qap/scripts/week2.sbatch
+#   (GPU as above):
+#     sbatch -J w2_goal     --export=ALL,STAGE=goal,QAP_RENDER_BACKEND= qap/scripts/week2.sbatch
 #   Fallback if the PR-AUC go/no-go fails:
 #     sbatch -J w2_distill  --export=ALL,STAGE=train,RUN=distill_iqe  qap/scripts/week2.sbatch
 #
@@ -39,6 +40,9 @@ unset MS_ASSET_DIR
 export PYTHONPATH=$PWD:${PYTHONPATH:-}
 export QAP_DATA_ROOT=${QAP_DATA_ROOT:-$PWD/qap_runs}
 export PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1
+# Per planner trial wall-clock limit. G4 trials never succeed and run into it; normal trials take
+# <50 s (validate, job 67666), so 120 s instead of the 300 s default saves hours on G4.
+export QAP_TRIAL_TIMEOUT=${QAP_TRIAL_TIMEOUT:-120}
 STAGE=${STAGE:?pass --export=ALL,STAGE=validate|graded|labels|train|prauc|awr|goal}
 PROCS=${PROCS:-$(( ${SLURM_CPUS_PER_TASK:-16} - 1 ))}
 R=$QAP_DATA_ROOT/runs
