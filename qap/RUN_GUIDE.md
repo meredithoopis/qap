@@ -14,7 +14,8 @@ qap/
   scenes/       IG-Sub graded scenes G0-G4: specs, builder, validate / episodes / planner feasibility
   feasibility/  (state, affordance, goal) triple labelling with the planner, PR-AUC (SoRB protocol)
   policy/       AWR goal-conditioned policy from -d_theta, oracle-goal reaching evaluation
-  scripts/      smoke_test.sh, week1.sh, week2.sh
+  scripts/      Slurm jobs: shortcut.sbatch, collect.sbatch (Week 1), week2.sbatch (Week 2);
+                smoke_test.sh, check_dataset.py; week1.sh / week2.sh (non-Slurm launchers, unused here)
   data/         frozen deliverables (hypotheses.md now; inventory, frozen task list, splits after Week 1)
   tests/        CPU property tests for the heads
 ```
@@ -275,62 +276,71 @@ Commit these after the freeze.
 
 ## Week 2
 
-Start after 1.4/1.5 have produced most of the data. Training reads whatever exists at launch.
+Week 2 builds the learned distance d_θ that QAP uses to price "can this object still get us to
+the goal?", and checks it twice before Week 3:
 
-### 2.1 d_θ: object-token transformer + IQE (64 × 32), QRL, ensemble K = 5
+- **PR-AUC go/no-go:** d_θ predicts planner-certified feasibility better than DINOv2 visual cosine.
+- **Goal-reaching go/no-go:** a policy driven by d_θ reaches the oracle object in most trials.
+
+Every stage is one Slurm job of `qap/scripts/week2.sbatch` (16 CPUs, 96G; 1 GPU unless
+`--gres=none`). With one running job per user they run strictly one after another, in the order
+below. Each job's log is `<job-name>_<jobid>.out`. Times are estimates for 15 simulator
+processes / one H100 and are not measured yet; the first log lines show the real speed.
+
+| # | Stage | Job | GPU | Needs | Estimate |
+|---|---|---|---|---|---|
+| 0 | apply shortcut results | login node | – | Week 1 | seconds |
+| 1 | validate graded scenes | `STAGE=validate` | no | 0 | 10–20 min |
+| 2 | graded episodes + planner feasibility | `STAGE=graded` | no | 1 (checked) | 1–2 h |
+| 3 | feasibility triples (+ images) | `STAGE=labels` | yes | 1 | 1–2 h |
+| 4 | train QRL (main distance) | `STAGE=train,RUN=qrl_iqe` | yes | 2 | 1.5–3 h |
+| 5 | train TMD (rival for selection) | `STAGE=train,RUN=tmd_iqe` | yes | 2 | 1.5–3 h |
+| 6 | PR-AUC + select QRL vs TMD | `STAGE=prauc` | yes | 3, 4, 5 | 15–30 min |
+| 7 | *optional* MRN / HILP variants, then re-run 6 | `STAGE=train,RUN=qrl_mrn` / `hilp_l2` | yes | 2 | 1.5–3 h each |
+| 8 | policy extraction (AWR) | `STAGE=awr` | yes | 6 | 2–4 h |
+| 9 | oracle-goal reaching | `STAGE=goal` | no | 8 | 30–60 min |
+
+Required path (0–6, 8, 9): roughly **9–15 h** of jobs; the optional variants add 3–6 h.
+
+Why this order: the graded scenes (1–2) are the yardstick for everything after them, and their
+episodes are added to training, so they come first. The labels (3) need only the scenes. Only
+QRL and TMD are needed for the go/no-go (6), so it runs before spending GPU time on the
+comparison-only variants (7). AWR (8) uses whichever distance stage 6 selects.
+
+To queue a stage behind the running one without watching, add
+`--dependency=afterok:<previous jobid>` to `sbatch`. Do not chain past stage 1 or stage 6:
+both need you to read a result first.
+
+### 0. Apply the shortcut-filter results (login node)
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python -m qap.quasimetric.train --objective qrl --head iqe --ensemble 5 --run-name qrl_iqe_k5
+python -m qap.week1.screen_tasks --apply-shortcut-results $QAP_DATA_ROOT/shortcut/summary.json --allow-missing-train
 ```
 
-- **Encoder:** CLS + 2 robot tokens + ≤16 object tokens (pose, half extents, 14 discrete
-  flags, category embedding) + 1 latched event token. 4 pre-LN layers, d = 256.
-- **Units:** transitions use a frame skip `--frame-skip 5` (one unit of distance is 5 control
-  steps). QRL constraint: E[relu(d(s,s') − 1)²] ≤ ε² (ε = 0.25). Objective: −softplus(200 − d)
-  with β = 0.01; tune `--softplus-offset` if distances saturate.
-- **Data:** robot data only (MP corpus + play), held-out scenes excluded.
-- **Ensemble:** members are trained in lockstep on shared batches. Pessimistic price =
-  mean + 1·std.
-- **Output:** `$QAP_DATA_ROOT/runs/<name>/{ckpt.pt,log.jsonl,config.json}`.
+Every Week 2 stage reads `retained_after_shortcut` from `qap/data/frozen_tasks.json`; the job
+prints a warning if this has not been done. All 8 evaluated tasks passed, so the 13 tasks stay.
 
-Variants for the selection study (same encoder). `week2.sh` runs them one after another
-next to the main ensemble, on GPU 0 by default (one H100 holds both); with a second GPU
-set `GPU_AUX=1`:
+### 1. Validate the graded scenes G0–G4 (CPU)
 
 ```bash
-python -m qap.quasimetric.train --objective tmd  --head iqe --ensemble 5 --run-name tmd_iqe_k5
-python -m qap.quasimetric.train --objective qrl  --head mrn --ensemble 5 --run-name qrl_mrn_k5
-python -m qap.quasimetric.train --objective hilp --head l2  --ensemble 5 --run-name hilp_l2_k5
+sbatch -J w2_validate --export=ALL,STAGE=validate --gres=none qap/scripts/week2.sbatch
 ```
 
-The DINOv2 visual cosine needs no training (see 2.3).
+Each retained task is built at five difficulty grades, from "copy the demo" to "abstain":
 
-**TMD caveat:** `objectives.TMD` is a state-only port of the TMD *loss structure*. It uses
-InfoNCE on future-state positives, plus a temporal backup that matches e^{−d(s,g)} to
-γ·e^{−d(s',g)} under the Bregman divergence of exp. Check its constants against the official
-code before reporting TMD numbers; all weights are flags.
-
-### 2.2 Graded scenes G0–G4 (CPU, run in parallel with 2.1)
-
-```bash
-python -m qap.scenes.graded_runner validate --trials 5 --procs 32          # table: success per (task, grade)
-python -m qap.scenes.graded_runner episodes --n-per-config 50 --procs 32   # 50 robot episodes per training config
-python -m qap.scenes.graded_runner feasibility --trials 10 --procs 32      # planner feasibility per (step, affordance)
-```
-
-| Grade | Scene | Solver |
-|---|---|---|
-| G0 | IG L0 | L0 |
-| G1 | IG L2 (new instance) | L0 |
-| G2 | L0 with an asset swap | L0 |
-| G3 | IG L3 | L3 |
-| G4 | IG L3 with the substitute parked out of reach (expected: abstain) | L3 |
+| Grade | Scene | Solver | Correct decision |
+|---|---|---|---|
+| G0 | IG L0 | L0 | C (copy) |
+| G1 | IG L2 (new instance) | L0 | C |
+| G2 | L0 with an asset swap | L0 | S (substitute) |
+| G3 | IG L3 | L3 | S |
+| G4 | IG L3 with the substitute parked out of reach | L3 | A (abstain) |
 
 No task file is edited. G2 patches the loader calls of the task module, and G4 parks actors
-after every reset.
+after every reset (it resolves `@l3_only` from `runtime_inventory.json`).
 
-**G2 exists only where the assets allow a different category with the same affordance.**
-`qap/scenes/graded_specs.py` proposes 5 swaps:
+G2 exists only where the assets allow a different category with the same affordance.
+`qap/scenes/graded_specs.py` proposes 5 swaps; the other 8 tasks have no G2:
 
 - PlaceClothBasket: basket → plastic box
 - PlaceCommodityRack: shelf → tray
@@ -338,79 +348,118 @@ after every reset.
 - TransFood: spoon → spatula
 - PlacePillBox: box → bowl
 
-The other 8 tasks have no G2. Check the `validate` table: G0–G3 should mostly succeed and G4
-must fail. Fix or remove proposed G2 entries that do not build or never succeed, then
-re-validate. G4 needs `runtime_inventory.json` to resolve `@l3_only`; set `hide` explicitly if
-it cannot.
+`validate` runs 5 trials per (task, grade) and writes `$QAP_DATA_ROOT/graded/validation.json`.
+**Read the table before stage 2:** G0–G3 should mostly succeed and G4 must fail. Remove or fix
+G2 entries that do not build or never succeed, then re-validate.
 
-**Outputs:**
-
-- `$QAP_DATA_ROOT/graded/validation.json`
-- `$QAP_DATA_ROOT/episodes/graded/<task>/<grade>/`
-- `$QAP_DATA_ROOT/labels/planner_feasibility.json`: one record per (task, grade, step,
-  affordance ∈ {copy, substitute}), with trials, success, feasible, the ground-truth label C/S/A
-  for the grade, and status `n/a` when a solver cannot run in that scene at all.
-
-You can add the graded training-split episodes to d_θ training with
-`--data $QAP_DATA_ROOT/episodes/mp $QAP_DATA_ROOT/episodes/play $QAP_DATA_ROOT/episodes/graded`.
-The held-out filter still removes G2–G4 of calibration and test tasks.
-
-### 2.3 Feasibility labels and PR-AUC; select QRL vs TMD
+### 2. Graded episodes and planner feasibility (CPU)
 
 ```bash
-python -m qap.feasibility.label_triples --seeds 20 --images --procs 32
-python -m qap.feasibility.prauc --visual --select qrl_iqe tmd_iqe \
-  --ckpt qrl_iqe=$QAP_DATA_ROOT/runs/qrl_iqe_k5/ckpt.pt tmd_iqe=$QAP_DATA_ROOT/runs/tmd_iqe_k5/ckpt.pt \
-         qrl_mrn=$QAP_DATA_ROOT/runs/qrl_mrn_k5/ckpt.pt hilp_l2=$QAP_DATA_ROOT/runs/hilp_l2_k5/ckpt.pt
+sbatch -J w2_graded --export=ALL,STAGE=graded --gres=none qap/scripts/week2.sbatch
 ```
 
-Triples (s, a, g) are certified by the IG planner. Seeds start at 5000, disjoint from the
-training seeds. There are four sources:
+- `episodes`: 50 robot episodes per (task, grade) →
+  `$QAP_DATA_ROOT/episodes/graded/<task>/<grade>/`. They show the distance what substitution
+  looks like (G2/G3). G2–G4 of calibration and test tasks are filtered out of training.
+- `feasibility`: 10 planner trials per (task, grade, step, affordance ∈ {copy, substitute}) →
+  `$QAP_DATA_ROOT/labels/planner_feasibility.json`, with the ground-truth label C/S/A and
+  status `n/a` when a solver cannot run in that scene at all.
+- Not resumable: before re-running, delete `$QAP_DATA_ROOT/episodes/graded` (otherwise the
+  episodes are added twice).
 
-- `planner`: reset → solver. `w` is the first gripper-contact onset and `g` the final state.
+### 3. Feasibility triples for PR-AUC (GPU)
+
+```bash
+sbatch -J w2_labels --export=ALL,STAGE=labels qap/scripts/week2.sbatch
+```
+
+Test cases (s, a, g) certified by the IG planner, 20 seeds per (task, grade) starting at seed
+5000 (disjoint from every training seed). Four sources:
+
+- `planner`: reset → solver. `w` is the first gripper-contact onset, `g` the final state.
   Successes are positives.
-- `planner_mid`: restart the solver from a restored mid-episode state.
+- `planner_mid`: the solver restarted from a restored mid-episode state.
 - `reverse_irr`: g → s after a latched irreversible event. Label 0.
-- `g4_vs_g3`: G4 start with the G3 goal of the same seed. Label 0.
+- `g4_vs_g3`: a G4 start with the G3 goal of the same seed. Label 0.
 
-The score is −[d(s,w) + d(w,g)] with the pessimistic ensemble price. `prauc` reports PR-AUC and
-ROC-AUC with bootstrap CIs by split, grade, source and reversibility. It picks QRL vs TMD on
-the calibration split (`summary.selection.chosen`). It also checks the go/no-go: the 95% CI of
-PR-AUC(selected) − PR-AUC(visual cosine) on the calibration and test splits must exclude 0.
+`--images` stores 224×224 zed2i frames for the DINOv2 baseline, so this stage needs the
+renderer and therefore a GPU. Output: `$QAP_DATA_ROOT/labels/triples/`.
 
-`--images` stores 224×224 zed2i frames, needed for DINOv2; it requires a working renderer.
-
-### 2.4 Policy extraction (AWR) and oracle-goal reaching
+### 4–5. Train the distance d_θ: QRL, then TMD (GPU)
 
 ```bash
-python -m qap.policy.awr --dist-ckpt $QAP_DATA_ROOT/runs/qrl_iqe_k5/ckpt.pt --run-name awr_main   # or the TMD ckpt if selected
-python -m qap.policy.eval_goal_reaching --policy $QAP_DATA_ROOT/runs/awr_main/policy.pt --grades G0 G1 G3 --seeds 10 --procs 16
+sbatch -J w2_qrl --export=ALL,STAGE=train,RUN=qrl_iqe qap/scripts/week2.sbatch
+sbatch -J w2_tmd --export=ALL,STAGE=train,RUN=tmd_iqe qap/scripts/week2.sbatch
 ```
 
-**Training:** A = d(s_t, g) − d(s_{t+k}, g) − 1 and weight = min(e^{βA}, 100). Hindsight goals
-are future states of the same episode, plus 10% random goals. The policy predicts joint deltas
-and the gripper command for both arms.
+- **Data:** robot data only: `episodes/mp` + `episodes/play` + `episodes/graded`, held-out
+  scenes excluded.
+- **Encoder:** CLS + 2 robot tokens + ≤16 object tokens (pose, half extents, 14 discrete
+  flags, category embedding) + 1 latched event token. 4 pre-LN layers, d = 256. Head: IQE
+  (64 × 32 components).
+- **Units:** frame skip 5 (one unit of distance is 5 control steps). QRL constraint:
+  E[relu(d(s,s') − 1)²] ≤ ε² (ε = 0.25). Objective: −softplus(200 − d) with β = 0.01; tune
+  `--softplus-offset` if distances saturate.
+- **Ensemble:** 5 members trained in lockstep on shared batches. Pessimistic price = mean + 1·std.
+- **Length:** 200k steps at batch 512. Training does not resume: a killed job starts over.
+- **Output:** `$QAP_DATA_ROOT/runs/<run>_k5/{ckpt.pt,log.jsonl,config.json}`.
+- **TMD caveat:** `objectives.TMD` is a state-only port of the TMD *loss structure*
+  (InfoNCE on future-state positives plus a temporal backup matching e^{−d(s,g)} to
+  γ·e^{−d(s',g)} under the Bregman divergence of exp). Check its constants against the
+  official code before reporting TMD numbers; all weights are flags.
 
-**Evaluation:** the planner first solves each seed once. That run gives the oracle entry state w
-(first contact) and goal g. The policy then starts from the same initial state with w as its
-subgoal, then g.
-
-**Go/no-go:** `summary.go_no_go_majority` checks that `reach_w` is above 0.5 (a majority of
-trials touch the oracle object). `reach_g` (task success) is reported as well.
-
-**Fallback if PR-AUC fails** (distance distillation into the IQE head):
+### 6. PR-AUC and the first go/no-go (GPU)
 
 ```bash
-python -m qap.quasimetric.train --objective distill --head iqe --ensemble 5 --run-name distill_iqe_k5 \
-  --data $QAP_DATA_ROOT/episodes/mp $QAP_DATA_ROOT/episodes/graded
+sbatch -J w2_prauc --export=ALL,STAGE=prauc qap/scripts/week2.sbatch
 ```
 
-### One-shot launchers
+Scores every trained distance (whichever `runs/*_k5/ckpt.pt` exist) and the DINOv2 visual
+cosine on the triples. The score is −[d(s,w) + d(w,g)] with the pessimistic price. It reports
+PR-AUC and ROC-AUC with bootstrap CIs by split, grade, source and reversibility, and writes
+`$QAP_DATA_ROOT/labels/prauc_results.json`.
+
+- **Selection:** QRL vs TMD on the calibration split → `summary.selection.chosen`.
+- **Go/no-go:** the 95% CI of PR-AUC(selected) − PR-AUC(visual cosine) must exclude 0 on the
+  calibration and test splits.
+- **If it fails**, train the distillation fallback and re-run this stage:
+  `sbatch -J w2_distill --export=ALL,STAGE=train,RUN=distill_iqe qap/scripts/week2.sbatch`
+  (trains on `episodes/mp` + `episodes/graded`).
+
+### 7. Optional: comparison variants (GPU)
 
 ```bash
-STAGE=inventory bash qap/scripts/week1.sh   # stages: inventory freeze shortcut mp play
-STAGE=train     bash qap/scripts/week2.sh   # stages: graded train labels prauc policy
+sbatch -J w2_mrn  --export=ALL,STAGE=train,RUN=qrl_mrn qap/scripts/week2.sbatch
+sbatch -J w2_hilp --export=ALL,STAGE=train,RUN=hilp_l2 qap/scripts/week2.sbatch
 ```
+
+Same encoder with a different head (MRN) or objective (HILP), for the comparison table only.
+Re-run stage 6 afterwards to add them to `prauc_results.json`.
+
+### 8. Policy extraction with AWR (GPU)
+
+```bash
+sbatch -J w2_awr --export=ALL,STAGE=awr qap/scripts/week2.sbatch                 # QRL selected
+sbatch -J w2_awr --export=ALL,STAGE=awr,DIST=tmd_iqe qap/scripts/week2.sbatch    # if TMD was selected
+```
+
+A = d(s_t, g) − d(s_{t+k}, g) − 1 and weight = min(e^{βA}, 100). Hindsight goals are future
+states of the same episode, plus 10% random goals. The policy predicts joint deltas and the
+gripper command for both arms. 200k steps at batch 1024 → `$QAP_DATA_ROOT/runs/awr_main/policy.pt`.
+
+### 9. Oracle-goal reaching, the second go/no-go (CPU)
+
+```bash
+sbatch -J w2_goal --export=ALL,STAGE=goal --gres=none qap/scripts/week2.sbatch
+```
+
+For each task × {G0, G1, G3} × 10 seeds (from 9000), the planner first solves the seed once to
+get the oracle entry state w (first contact) and goal g. The policy then starts from the same
+initial state with w as its subgoal, then g. Output:
+`$QAP_DATA_ROOT/labels/goal_reaching_awr_main.json`.
+
+**Go/no-go:** `summary.go_no_go_majority`: `reach_w` above 0.5 (a majority of trials touch the
+oracle object). `reach_g` (task success) is reported as well.
 
 ---
 
