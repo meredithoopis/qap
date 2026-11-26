@@ -8,6 +8,7 @@ process (the scripts in qap/collect spawn one process per job).
 
 from __future__ import annotations
 
+import os
 from typing import Any, Callable, Dict, Optional
 
 from qap.common.tasks import env_id_for
@@ -52,6 +53,11 @@ def make_env(task: str, level: str = "L0", *, obs_mode: str = "none",
     if shader is not None:
         kwargs["sensor_configs"] = dict(shader_pack=shader)
         kwargs["human_render_camera_configs"] = dict(shader_pack=shader)
+    # Optional: QAP_RENDER_BACKEND=none disables SAPIEN's renderer (Vulkan) so state-only
+    # collection can run on CPU-only nodes. Only valid when no images are requested.
+    rb = os.environ.get("QAP_RENDER_BACKEND")
+    if rb and obs_mode == "none" and render_mode is None and shader is None:
+        kwargs["render_backend"] = None if rb.lower() == "none" else rb
     if env_kwargs:
         kwargs.update(env_kwargs)
     return gym.make(env_id_for(task, level), **kwargs)

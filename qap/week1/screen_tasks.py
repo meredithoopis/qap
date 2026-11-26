@@ -133,6 +133,8 @@ def main() -> None:
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--apply-shortcut-results", type=Path, default=None,
                     help="shortcut_filter summary JSON; removes tasks that fail the filter (DP L3 success >= 50%%)")
+    ap.add_argument("--allow-missing-train", action="store_true",
+                    help="apply even if train-split tasks were not evaluated (they are kept; listed as not_evaluated)")
     args = ap.parse_args()
 
     ft, sp = args.out / "frozen_tasks.json", args.out / "splits.json"
@@ -141,10 +143,15 @@ def main() -> None:
         frozen, splits = load_json(ft), load_json(sp)
         res = load_json(args.apply_shortcut_results)
         missing = [t for t, r in res["tasks"].items() if not r.get("evaluated")]
-        if missing:
-            raise SystemExit(f"shortcut results missing for {missing}; finish the DP evaluations first")
-        removed = {t for t, r in res["tasks"].items() if not r["passes"]}
+        train_only = set(splits["splits"].get("train", []))
+        if missing and not (args.allow_missing_train and set(missing) <= train_only):
+            raise SystemExit(f"shortcut results missing for {missing}; finish the DP evaluations first"
+                             + ("" if set(missing) <= train_only else
+                                " (--allow-missing-train only covers train-split tasks)"))
+        # unevaluated train tasks are kept (the filter can only remove tasks) and recorded as such
+        removed = {t for t, r in res["tasks"].items() if r.get("evaluated") and not r["passes"]}
         frozen["shortcut_filter"] = dict(source=str(args.apply_shortcut_results), removed=sorted(removed),
+                                         not_evaluated=sorted(missing),
                                          results=res["tasks"], applied_utc=datetime.now(timezone.utc).isoformat())
         frozen["retained_after_shortcut"] = [t["task"] for t in frozen["retained"] if t["task"] not in removed]
         for k in ("train", "calibration", "test"):
@@ -154,7 +161,8 @@ def main() -> None:
         splits["sha256_16"] = _digest(splits["splits"])
         save_json(frozen, ft)
         save_json(splits, sp)
-        print(f"shortcut filter removed {sorted(removed)}; retained {frozen['retained_after_shortcut']}")
+        print(f"shortcut filter removed {sorted(removed)}; retained {frozen['retained_after_shortcut']}"
+              + (f"; not evaluated (kept): {sorted(missing)}" if missing else ""))
         return
 
     res = screen(args.min_gap, not args.no_intent_check, args.count_grasp_change, args.model)

@@ -172,27 +172,45 @@ transcribed them into `qap/week1/ig_reference.py`. Every row's mean matches the 
 column, and the row alignment agrees with the paper's own narrative. Spot-check a few rows
 against the PDF before freezing.
 
-### 1.3 Shortcut filter (DP on L0–L2 per retained task, background)
+### Running on the cluster
+
+The long Week-1 jobs run as Slurm batch jobs (no `nohup`), submitted from the repository root.
+The QOS allows one running job per user, and a 32-CPU job is refused (`QOSMaxCpuPerJobLimit`),
+so the jobs below use 16 CPUs and run one after another. Check the node first:
 
 ```bash
-python -m qap.week1.shortcut_filter prepare                    # configs + per-task scripts (seconds)
-# Slurm: one array task per retained task, 1 GPU each, at most 4 at a time, resumable
-sbatch qap/scripts/shortcut.sbatch                             # logs: shortcut_<job>_<i>.out
-# (without Slurm: nohup bash $QAP_DATA_ROOT/shortcut/run_shortcut.sh > $QAP_DATA_ROOT/logs/shortcut.log 2>&1 &)
-# ... when all tasks are evaluated:
-python -m qap.week1.shortcut_filter summarize                  # KEEP if DP L3 success < 50%
-python -m qap.week1.screen_tasks --apply-shortcut-results $QAP_DATA_ROOT/shortcut/summary.json
+squeue -u $USER
+scontrol show node worker-0 | grep -E "Gres|AllocTRES"     # free CPUs / GPUs
 ```
+
+### 1.3 Shortcut filter (DP on L0–L2 per retained task)
+
+```bash
+python -m qap.week1.shortcut_filter prepare                    # tasks.txt + per-task scripts (seconds)
+# one array task per line of tasks.txt (test -> calibration -> train); %1 = one at a time
+sbatch --array=1-8%1 --cpus-per-task=16 --mem=64G --time=0 --nodelist=worker-0 qap/scripts/shortcut.sbatch
+# logs: shortcut_<job>_<i>.out ; when all array tasks have finished:
+python -m qap.week1.shortcut_filter summarize                  # KEEP if DP L3 success < 50%
+python -m qap.week1.screen_tasks --apply-shortcut-results $QAP_DATA_ROOT/shortcut/summary.json --allow-missing-train
+```
+
+- `--array=1-8` covers the 8 held-out tasks (5 test + 3 calibration). The 5 train tasks
+  (lines 9–13) are optional: `--array=9-13%1` runs them. `--allow-missing-train` keeps
+  unevaluated train tasks and records them as `not_evaluated`.
+- Each task takes about 1–1.5 h on one H100 (≈50 min training at 100 epochs, then L0 + L3
+  evaluation), so the 8 held-out tasks take roughly 8–12 h in sequence.
+- Resumable: a task with `final_model.pt` skips training, and a killed task resumes from its
+  newest epoch checkpoint. Delete `$QAP_DATA_ROOT/shortcut/runs` to start over.
+- Each task has its own DINOv2 feature cache (`$QAP_DATA_ROOT/shortcut/te_cache/<task>`); a
+  shared cache causes `CachedFrozenBackbone Cache miss` on the second task.
 
 This uses the IG DP trainer/evaluator unchanged: video-only, DINOv2, the same flags as
 `exp_scripts/diffusion_policy`. Training data per task is L0–L2 × 50 episodes, and evaluation
 covers L0 (sanity) and L3. Evaluation renders with `--shader default`; IG's own runs use
 `rt-fast`, which needs the OptiX denoiser and fails on drivers without `libnvoptix`
-(`prepare --shader rt-fast` restores it). IG trains C45 for 10 epochs (about 80k steps); one task's L0–L2 corpus is much smaller, so the
-default here is 100 epochs (`--epochs`, about 35k steps at batch 128). With 8 GPUs in parallel
-the whole filter takes roughly 3–7 h; test and calibration tasks run first. A task killed at
-the time limit resumes from its newest epoch checkpoint when resubmitted. The filter can only *remove* tasks. Apply its results before any
-QAP evaluation.
+(`prepare --shader rt-fast` restores it). IG trains C45 for 10 epochs (about 80k steps); one
+task's L0–L2 corpus is much smaller, so the default here is 100 epochs (`--epochs`). The filter
+can only *remove* tasks. Apply its results before any QAP evaluation.
 
 ### 1.4 Robot data as object-centric states
 
@@ -201,40 +219,46 @@ poses. So the 45-task corpus is re-generated with IG's own planner solutions whi
 extractor records the states:
 
 ```bash
-nohup python -m qap.collect.collect_mp_states --corpus 45 --levels L0 L1 L2 L3 --n-per-scene 50 --procs 32 \
-  > $QAP_DATA_ROOT/logs/collect_mp.log 2>&1 &
+sbatch -J qap_mp --export=ALL,WHAT=mp --cpus-per-task=16 --mem=64G --gres=gpu:1 qap/scripts/collect.sbatch
+grep '^{' qap_mp_<jobid>.out | tail -3          # progress: one JSON line per finished scene
+grep -c '^{' qap_mp_<jobid>.out                 # 172 when done
 ```
 
-- This is 45 tasks × 4 levels × 50 successful episodes. Failed planner attempts are kept too,
-  because they are valid robot transitions (`--no-failures` to drop them).
-- It is resumable: seeds whose episode already exists are skipped.
+- This is 45 tasks × 4 levels × 50 successful episodes (172 scenes after the held-out
+  exclusion), 15 simulator processes. Reference run: 96 min, ≈2.95M transitions, 394 MB.
+- SAPIEN creates a Vulkan renderer even without images, so this job asked for a GPU. Without
+  one it fails with `vk::createInstanceUnique: ErrorIncompatibleDriver`; when no GPU is free,
+  use the CPU-only form shown in 1.5.
+- Failed planner attempts are kept too, because they are valid robot transitions
+  (`--no-failures` to drop them).
+- It is resumable: resubmit the same command and seeds whose episode exists are skipped.
 - **Held-out policy:** L3 scenes of calibration and test tasks are *not* collected (and graded
   G2–G4 scenes of those tasks are filtered out of training), so substitute connectivity of
   held-out tasks never enters d_θ. Use `--include-heldout` to change this.
+- Benign log lines: `screw plan failed`, `env.agent ... deprecated`, `pynvml ... deprecated`.
 
-### 1.5 Robot play (∼1M transitions, background)
+### 1.5 Robot play (∼1M transitions)
+
+CPU-only: `QAP_RENDER_BACKEND=none` disables the renderer and `--gres=none` overrides the
+script's GPU request, so it starts even when every GPU is allocated.
 
 ```bash
-nohup python -m qap.collect.play --target-transitions 1000000 --procs 32 > $QAP_DATA_ROOT/logs/play.log 2>&1 &
-python -m qap.collect.play --count        # progress
+sbatch -J qap_play --export=ALL,WHAT=play,QAP_RENDER_BACKEND=none --cpus-per-task=16 --mem=64G --gres=none qap/scripts/collect.sbatch
+grep '^{' qap_play_<jobid>.out | tail -3        # progress: one JSON line per batch of 10 episodes
+python -m qap.collect.play --count              # transitions saved so far
+grep '^{' qap_play_<jobid>.out | grep -c fatal  # should be 0
 ```
 
 Each play episode resets a random IG scene (any of the 50 tasks, L0–L3, same held-out
 exclusion). It then runs 3–8 random primitives through the IG motion planner with the nearer
 arm: pick, place, place-on-another-object, tilt (pour-like), push, press, drag an articulated
-part, random reach, home. Re-run the command to top up to the target.
+part, random reach, home. Reference run: 46 min, ≈1.5M transitions (all 400 batches finish, so
+the total overshoots the 1M target). Resubmit the same command to top up.
 
-### 1.6 Week-1 go/no-go: reproduction within ±10 points
-
-You reproduce ACT/DINOv2 and DP/DINOv2 with the IG recipes as before. Then:
-
-```bash
-python -m qap.week1.check_reproduction --model dp  --results <dp eval output dir>  --tasks StirSpoon PlaceMugRack
-python -m qap.week1.check_reproduction --model act --results <act eval output dir> --tasks StirSpoon PlaceMugRack
-```
-
-The default reference is Table 11 (full-corpus training). If you reproduced the C15/30/45
-recipe, compare against those numbers instead with `--reference ref.json`.
+The log is full of planner warnings (`Fail to parametrize path`, `The path is not controllable`,
+`controllable set ... can't be computed`, `TOPP failed in screw planning`). They mean a random
+target was unreachable and that action was skipped; they are expected. What matters is
+`"errors": 0` and no `"fatal"` in the JSON lines.
 
 **Week-1 deliverables:**
 

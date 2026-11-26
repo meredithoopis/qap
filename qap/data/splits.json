@@ -24,5 +24,6 @@
   "by": "task",
   "rule_sha": "e78543ae097d064e",
   "notes": "no task shared between splits; calibration is used only for tau (and lambda)",
-  "sha256_16": "0101cda82cd549b1"
+  "sha256_16": "0101cda82cd549b1",
+  "shortcut_removed": []
 }

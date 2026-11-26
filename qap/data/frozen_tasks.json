@@ -740,5 +740,112 @@
   ],
   "n_retained": 13,
   "frozen_utc": "2026-11-25T09:10:03.415949+00:00",
-  "sha256_16": "e78543ae097d064e"
+  "sha256_16": "4bdf7a2cfaace982",
+  "shortcut_filter": {
+    "source": "qap_runs/shortcut/summary.json",
+    "removed": [],
+    "not_evaluated": [
+      "OpenLiquidCap",
+      "PlaceClothBasket",
+      "PlaceCommodityRack",
+      "PlacePlateRack",
+      "PutCubeOnScale"
+    ],
+    "results": {
+      "PlaceBookBookcase": {
+        "l0_success": 1.0,
+        "l3_success": 0.0,
+        "evaluated": true,
+        "passes": true
+      },
+      "PlaceClothBasket": {
+        "l0_success": null,
+        "l3_success": null,
+        "evaluated": false,
+        "passes": false
+      },
+      "PlaceMagazineFolder": {
+        "l0_success": 1.0,
+        "l3_success": 0.0,
+        "evaluated": true,
+        "passes": true
+      },
+      "PlaceCommodityRack": {
+        "l0_success": null,
+        "l3_success": null,
+        "evaluated": false,
+        "passes": false
+      },
+      "PlacePlateRack": {
+        "l0_success": null,
+        "l3_success": null,
+        "evaluated": false,
+        "passes": false
+      },
+      "PourKetchupFries": {
+        "l0_success": 0.8,
+        "l3_success": 0.05,
+        "evaluated": true,
+        "passes": true
+      },
+      "TransFood": {
+        "l0_success": 0.9,
+        "l3_success": 0.0,
+        "evaluated": true,
+        "passes": true
+      },
+      "PlaceFoodScale": {
+        "l0_success": 0.85,
+        "l3_success": 0.0,
+        "evaluated": true,
+        "passes": true
+      },
+      "ScanPillBottle": {
+        "l0_success": 1.0,
+        "l3_success": 0.0,
+        "evaluated": true,
+        "passes": true
+      },
+      "PlacePillBox": {
+        "l0_success": 0.9,
+        "l3_success": 0.0,
+        "evaluated": true,
+        "passes": true
+      },
+      "PutCubeOnScale": {
+        "l0_success": null,
+        "l3_success": null,
+        "evaluated": false,
+        "passes": false
+      },
+      "OpenLiquidCap": {
+        "l0_success": null,
+        "l3_success": null,
+        "evaluated": false,
+        "passes": false
+      },
+      "PutBox": {
+        "l0_success": 1.0,
+        "l3_success": 0.0,
+        "evaluated": true,
+        "passes": true
+      }
+    },
+    "applied_utc": "2026-11-26T02:54:58.491756+00:00"
+  },
+  "retained_after_shortcut": [
+    "PlaceBookBookcase",
+    "PlaceClothBasket",
+    "PlaceMagazineFolder",
+    "PlaceCommodityRack",
+    "PlacePlateRack",
+    "PourKetchupFries",
+    "TransFood",
+    "PlaceFoodScale",
+    "ScanPillBottle",
+    "PlacePillBox",
+    "PutCubeOnScale",
+    "OpenLiquidCap",
+    "PutBox"
+  ]
 }
